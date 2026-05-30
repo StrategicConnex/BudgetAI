@@ -71,6 +71,25 @@ export async function callAI(
 
   if (!response.ok) {
     const errorText = await response.text();
+    
+    // Auto-reintento con ajuste dinámico de maxTokens para créditos limitados
+    if (response.status === 402) {
+      try {
+        const errorObj = JSON.parse(errorText);
+        const message = errorObj.error?.message || '';
+        const match = message.match(/can only afford (\d+)/i);
+        if (match && match[1]) {
+          const affordTokens = parseInt(match[1], 10);
+          // Usamos un pequeño margen de seguridad de 20 tokens menos
+          const safeTokens = Math.max(200, affordTokens - 20);
+          console.warn(`[AI] Créditos limitados en OpenRouter. Reintentando de forma transparente con max_tokens: ${safeTokens}`);
+          return await callAI(messages, { ...options, maxTokens: safeTokens });
+        }
+      } catch (err) {
+        console.error('[AI] Error procesando respuesta 402:', err);
+      }
+    }
+    
     throw new Error(`[OpenRouter] ${response.status}: ${errorText}`);
   }
 
