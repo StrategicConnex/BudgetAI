@@ -65,6 +65,11 @@ interface BudgetState {
 
   // Update generated budget item inline
   updateBudgetItem: (itemId: string, updates: Partial<BudgetData['items'][0]>) => void;
+  updateBudgetGeneral: (updates: Partial<Pick<BudgetData, 'titulo' | 'descripcionGeneral' | 'categoria' | 'numero'>>) => void;
+  updateBudgetCliente: (updates: Partial<BudgetCliente>) => void;
+  updateBudgetCondiciones: (updates: Partial<BudgetCondiciones>) => void;
+  addBudgetItem: (categoria: string) => void;
+  deleteBudgetItem: (itemId: string) => void;
 
   // Reset
   reset: () => void;
@@ -129,6 +134,54 @@ export const useBudgetStore = create<BudgetState>()(
         item.precioTotal = total;
         return acc + total;
       }, 0);
+      state.budget.totales.subtotal = subtotal;
+      state.budget.totales.impuestos = subtotal * state.budget.totales.tasaImpuesto;
+      state.budget.totales.total = subtotal + state.budget.totales.impuestos;
+    }),
+
+    updateBudgetGeneral: (updates) => set((state) => {
+      if (!state.budget) return;
+      Object.assign(state.budget, updates);
+    }),
+
+    updateBudgetCliente: (updates) => set((state) => {
+      if (!state.budget) return;
+      Object.assign(state.budget.cliente, updates);
+    }),
+
+    updateBudgetCondiciones: (updates) => set((state) => {
+      if (!state.budget) return;
+      Object.assign(state.budget.condiciones, updates);
+    }),
+
+    addBudgetItem: (categoria) => set((state) => {
+      if (!state.budget) return;
+      const newItem = {
+        id: Math.random().toString(36).substring(2, 9),
+        titulo: 'Nuevo trabajo',
+        descripcion: 'Descripción del trabajo a realizar...',
+        unidad: 'u',
+        cantidad: 1,
+        precioUnitario: 0,
+        precioTotal: 0,
+        categoria: categoria || 'General',
+        imagenes: [],
+      };
+      state.budget.items.push(newItem);
+
+      // Recalculate totals
+      const subtotal = state.budget.items.reduce((acc, item) => acc + (item.cantidad || 0) * (item.precioUnitario || 0), 0);
+      state.budget.totales.subtotal = subtotal;
+      state.budget.totales.impuestos = subtotal * state.budget.totales.tasaImpuesto;
+      state.budget.totales.total = subtotal + state.budget.totales.impuestos;
+    }),
+
+    deleteBudgetItem: (itemId) => set((state) => {
+      if (!state.budget) return;
+      state.budget.items = state.budget.items.filter(i => i.id !== itemId);
+
+      // Recalculate totals
+      const subtotal = state.budget.items.reduce((acc, item) => acc + (item.cantidad || 0) * (item.precioUnitario || 0), 0);
       state.budget.totales.subtotal = subtotal;
       state.budget.totales.impuestos = subtotal * state.budget.totales.tasaImpuesto;
       state.budget.totales.total = subtotal + state.budget.totales.impuestos;

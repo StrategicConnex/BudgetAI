@@ -4,7 +4,7 @@ import { useBudgetStore } from '@/store/budget.store';
 import { formatCurrency } from '@/lib/ai/stages/validator';
 import {
   FileDown, FileText, FileCode, ArrowLeft, Pencil, Check, X,
-  Building2, User, Calendar, Hash, Package
+  Building2, User, Calendar, Hash, Package, Trash2, Plus
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type { BudgetItem } from '@/types/budget';
@@ -16,6 +16,8 @@ export default function BudgetPreview() {
     setIsExportingPDF, setIsExportingDOCX, setIsExportingHTML,
     setExportError, exportError,
     setCurrentStep, updateBudgetItem,
+    updateBudgetGeneral, updateBudgetCliente, updateBudgetCondiciones,
+    addBudgetItem, deleteBudgetItem,
     reset,
   } = useBudgetStore();
 
@@ -24,6 +26,70 @@ export default function BudgetPreview() {
   // After the guard, TS knows budget is non-null
   const b = budget;
   const fmt = (n: number) => formatCurrency(n, b.totales.currency);
+
+  const [editingHeader, setEditingHeader] = useState(false);
+  const [headerForm, setHeaderForm] = useState({
+    titulo: b.titulo,
+    descripcionGeneral: b.descripcionGeneral,
+    categoria: b.categoria,
+    numero: b.numero || '',
+  });
+
+  const [editingClient, setEditingClient] = useState(false);
+  const [clientForm, setClientForm] = useState({
+    nombre: b.cliente.nombre,
+    empresa: b.cliente.empresa || '',
+    email: b.cliente.email || '',
+    cuit: b.cliente.cuit || '',
+  });
+
+  const [editingConditions, setEditingConditions] = useState(false);
+  const [conditionsForm, setConditionsForm] = useState({
+    validezDias: b.condiciones.validezDias,
+    formaPago: b.condiciones.formaPago,
+    notas: b.condiciones.notas || '',
+  });
+
+  useEffect(() => {
+    setHeaderForm({
+      titulo: b.titulo,
+      descripcionGeneral: b.descripcionGeneral,
+      categoria: b.categoria,
+      numero: b.numero || '',
+    });
+  }, [b.titulo, b.descripcionGeneral, b.categoria, b.numero]);
+
+  useEffect(() => {
+    setClientForm({
+      nombre: b.cliente.nombre,
+      empresa: b.cliente.empresa || '',
+      email: b.cliente.email || '',
+      cuit: b.cliente.cuit || '',
+    });
+  }, [b.cliente]);
+
+  useEffect(() => {
+    setConditionsForm({
+      validezDias: b.condiciones.validezDias,
+      formaPago: b.condiciones.formaPago,
+      notas: b.condiciones.notas || '',
+    });
+  }, [b.condiciones]);
+
+  function saveHeader() {
+    updateBudgetGeneral(headerForm);
+    setEditingHeader(false);
+  }
+
+  function saveClient() {
+    updateBudgetCliente(clientForm);
+    setEditingClient(false);
+  }
+
+  function saveConditions() {
+    updateBudgetCondiciones(conditionsForm);
+    setEditingConditions(false);
+  }
 
   async function handleExportPDF() {
     setIsExportingPDF(true);
@@ -173,55 +239,236 @@ export default function BudgetPreview() {
       {/* Budget preview card */}
       <div className="glass-card overflow-hidden">
         {/* Header */}
-        <div className="px-8 py-6 border-b border-border"
+        <div className="group/header relative px-8 py-6 border-b border-border"
           style={{ background: 'linear-gradient(135deg, hsl(239 84% 67% / 0.08), hsl(262 80% 65% / 0.08))' }}>
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="badge-premium mb-3 w-fit">{b.categoria}</div>
-              <h1 className="text-2xl font-bold text-foreground mb-1">{b.titulo}</h1>
-              <p className="text-muted-foreground text-sm">{b.descripcionGeneral}</p>
-            </div>
-            <div className="text-right">
-              <div className="font-mono text-lg font-bold text-primary">{b.numero}</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {b.createdAt ? new Date(b.createdAt).toLocaleDateString('es-AR', {
-                  day: '2-digit', month: 'long', year: 'numeric'
-                }) : ''}
+          {editingHeader ? (
+            <div className="space-y-4">
+              <div className="flex gap-4">
+                <div className="w-1/2">
+                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold block mb-1">Categoría</label>
+                  <input
+                    className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground focus:outline-none focus:border-primary/50 transition-colors"
+                    value={headerForm.categoria}
+                    onChange={e => setHeaderForm(f => ({ ...f, categoria: e.target.value }))}
+                  />
+                </div>
+                <div className="w-1/2">
+                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold block mb-1">Nº Presupuesto</label>
+                  <input
+                    className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground focus:outline-none focus:border-primary/50 transition-colors font-mono"
+                    value={headerForm.numero}
+                    onChange={e => setHeaderForm(f => ({ ...f, numero: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold block mb-1">Título del Presupuesto</label>
+                <input
+                  className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground focus:outline-none focus:border-primary/50 transition-colors font-bold"
+                  value={headerForm.titulo}
+                  onChange={e => setHeaderForm(f => ({ ...f, titulo: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold block mb-1">Descripción General</label>
+                <textarea
+                  className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-muted-foreground focus:outline-none focus:border-primary/50 transition-colors resize-none"
+                  rows={2}
+                  value={headerForm.descripcionGeneral}
+                  onChange={e => setHeaderForm(f => ({ ...f, descripcionGeneral: e.target.value }))}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={saveHeader}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-lg text-xs font-semibold border border-emerald-500/30 transition-all cursor-pointer"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  Guardar
+                </button>
+                <button
+                  onClick={() => { setHeaderForm({ titulo: b.titulo, descripcionGeneral: b.descripcionGeneral, categoria: b.categoria, numero: b.numero || '' }); setEditingHeader(false); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-muted-foreground rounded-lg text-xs font-semibold border border-border transition-all cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Cancelar
+                </button>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-start justify-between">
+              <div className="flex-1 pr-12">
+                <div className="badge-premium mb-3 w-fit">{b.categoria}</div>
+                <h1 className="text-2xl font-bold text-foreground mb-1">{b.titulo}</h1>
+                <p className="text-muted-foreground text-sm">{b.descripcionGeneral}</p>
+              </div>
+              <div className="text-right flex flex-col items-end">
+                <div className="font-mono text-lg font-bold text-primary">{b.numero}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {b.createdAt ? new Date(b.createdAt).toLocaleDateString('es-AR', {
+                    day: '2-digit', month: 'long', year: 'numeric'
+                  }) : ''}
+                </div>
+              </div>
+              <button
+                onClick={() => setEditingHeader(true)}
+                className="absolute top-4 right-4 opacity-0 group-hover/header:opacity-100 p-2 rounded-lg bg-secondary/80 border border-border text-muted-foreground hover:text-primary hover:bg-primary/10 hover:border-primary/20 transition-all duration-200 cursor-pointer"
+                title="Editar cabecera"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Parties */}
         <div className="grid grid-cols-2 gap-0 border-b border-border">
-          <div className="px-8 py-5 border-r border-border">
+          <div className="group/client relative px-8 py-5 border-r border-border">
             <div className="flex items-center gap-2 text-xs font-semibold text-primary uppercase tracking-wide mb-3">
               <User className="w-3.5 h-3.5" />
               Cliente
             </div>
-            <div className="font-semibold text-foreground">{b.cliente.nombre}</div>
-            {b.cliente.empresa && <div className="text-sm text-muted-foreground">{b.cliente.empresa}</div>}
-            {b.cliente.email && <div className="text-xs text-muted-foreground">{b.cliente.email}</div>}
-            {b.cliente.cuit && <div className="text-xs text-muted-foreground">CUIT: {b.cliente.cuit}</div>}
+            {editingClient ? (
+              <div className="space-y-3 animate-fade-in">
+                <div>
+                  <label className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold block mb-0.5">Nombre</label>
+                  <input
+                    className="w-full px-2 py-1 rounded bg-secondary border border-border text-xs text-foreground focus:outline-none focus:border-primary/50"
+                    value={clientForm.nombre}
+                    onChange={e => setClientForm(f => ({ ...f, nombre: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold block mb-0.5">Empresa</label>
+                  <input
+                    className="w-full px-2 py-1 rounded bg-secondary border border-border text-xs text-foreground focus:outline-none focus:border-primary/50"
+                    value={clientForm.empresa}
+                    onChange={e => setClientForm(f => ({ ...f, empresa: e.target.value }))}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold block mb-0.5">Email</label>
+                    <input
+                      className="w-full px-2 py-1 rounded bg-secondary border border-border text-xs text-foreground focus:outline-none focus:border-primary/50"
+                      value={clientForm.email}
+                      onChange={e => setClientForm(f => ({ ...f, email: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold block mb-0.5">CUIT</label>
+                    <input
+                      className="w-full px-2 py-1 rounded bg-secondary border border-border text-xs text-foreground focus:outline-none focus:border-primary/50 font-mono"
+                      value={clientForm.cuit}
+                      onChange={e => setClientForm(f => ({ ...f, cuit: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-1 pt-1">
+                  <button
+                    onClick={saveClient}
+                    className="p-1 rounded text-emerald-400 hover:bg-emerald-400/10 cursor-pointer"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => { setClientForm({ nombre: b.cliente.nombre, empresa: b.cliente.empresa || '', email: b.cliente.email || '', cuit: b.cliente.cuit || '' }); setEditingClient(false); }}
+                    className="p-1 rounded text-muted-foreground hover:bg-secondary cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="font-semibold text-foreground">{b.cliente.nombre}</div>
+                {b.cliente.empresa && <div className="text-sm text-muted-foreground">{b.cliente.empresa}</div>}
+                {b.cliente.email && <div className="text-xs text-muted-foreground">{b.cliente.email}</div>}
+                {b.cliente.cuit && <div className="text-xs text-muted-foreground font-mono">CUIT: {b.cliente.cuit}</div>}
+                <button
+                  onClick={() => setEditingClient(true)}
+                  className="absolute top-4 right-4 opacity-0 group-hover/client:opacity-100 p-1.5 rounded bg-secondary/80 border border-border text-muted-foreground hover:text-primary hover:bg-primary/10 hover:border-primary/20 transition-all duration-200 cursor-pointer"
+                  title="Editar cliente"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              </>
+            )}
           </div>
-          <div className="px-8 py-5">
+          <div className="group/conditions relative px-8 py-5">
             <div className="flex items-center gap-2 text-xs font-semibold text-primary uppercase tracking-wide mb-3">
               <Building2 className="w-3.5 h-3.5" />
               Condiciones
             </div>
-            <div className="space-y-1 text-sm">
-              <div className="flex gap-2">
-                <span className="text-muted-foreground">Validez:</span>
-                <span className="text-foreground font-medium">{b.condiciones.validezDias} días</span>
+            {editingConditions ? (
+              <div className="space-y-3 animate-fade-in">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold block mb-0.5">Validez (días)</label>
+                    <input
+                      type="number"
+                      className="w-full px-2 py-1 rounded bg-secondary border border-border text-xs text-foreground focus:outline-none focus:border-primary/50"
+                      value={conditionsForm.validezDias}
+                      onChange={e => setConditionsForm(f => ({ ...f, validezDias: Number(e.target.value) }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold block mb-0.5">Forma de Pago</label>
+                    <input
+                      className="w-full px-2 py-1 rounded bg-secondary border border-border text-xs text-foreground focus:outline-none focus:border-primary/50"
+                      value={conditionsForm.formaPago}
+                      onChange={e => setConditionsForm(f => ({ ...f, formaPago: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold block mb-0.5">Notas adicionales</label>
+                  <textarea
+                    className="w-full px-2 py-1 rounded bg-secondary border border-border text-xs text-muted-foreground focus:outline-none focus:border-primary/50 resize-none"
+                    rows={2}
+                    value={conditionsForm.notas}
+                    onChange={e => setConditionsForm(f => ({ ...f, notas: e.target.value }))}
+                  />
+                </div>
+                <div className="flex justify-end gap-1 pt-1">
+                  <button
+                    onClick={saveConditions}
+                    className="p-1 rounded text-emerald-400 hover:bg-emerald-400/10 cursor-pointer"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => { setConditionsForm({ validezDias: b.condiciones.validezDias, formaPago: b.condiciones.formaPago, notas: b.condiciones.notas || '' }); setEditingConditions(false); }}
+                    className="p-1 rounded text-muted-foreground hover:bg-secondary cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <span className="text-muted-foreground">Pago:</span>
-                <span className="text-foreground font-medium">{b.condiciones.formaPago}</span>
-              </div>
-              {b.condiciones.notas && (
-                <div className="text-xs text-muted-foreground mt-1">{b.condiciones.notas}</div>
-              )}
-            </div>
+            ) : (
+              <>
+                <div className="space-y-1 text-sm">
+                  <div className="flex gap-2">
+                    <span className="text-muted-foreground">Validez:</span>
+                    <span className="text-foreground font-medium">{b.condiciones.validezDias} días</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-muted-foreground">Pago:</span>
+                    <span className="text-foreground font-medium">{b.condiciones.formaPago}</span>
+                  </div>
+                  {b.condiciones.notas && (
+                    <div className="text-xs text-muted-foreground mt-1">{b.condiciones.notas}</div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setEditingConditions(true)}
+                  className="absolute top-4 right-4 opacity-0 group-hover/conditions:opacity-100 p-1.5 rounded bg-secondary/80 border border-border text-muted-foreground hover:text-primary hover:bg-primary/10 hover:border-primary/20 transition-all duration-200 cursor-pointer"
+                  title="Editar condiciones"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -246,14 +493,31 @@ export default function BudgetPreview() {
           </div>
 
           {Object.entries(grouped).map(([category, items]) => (
-            <div key={category} className="mb-2">
-              <div className="px-4 py-1.5 text-xs font-semibold text-primary uppercase tracking-wide"
+            <div key={category} className="mb-4">
+              <div className="px-4 py-1.5 text-xs font-semibold text-primary uppercase tracking-wide rounded-md mb-1"
                 style={{ background: 'hsl(239 84% 67% / 0.07)' }}>
                 {category}
               </div>
-              {items.map(item => (
-                <EditableItemRow key={item.id} item={item} fmt={fmt} onUpdate={updateBudgetItem} />
-              ))}
+              <div className="divide-y divide-border/20">
+                {items.map(item => (
+                  <EditableItemRow
+                    key={item.id}
+                    item={item}
+                    fmt={fmt}
+                    onUpdate={updateBudgetItem}
+                    onDelete={deleteBudgetItem}
+                  />
+                ))}
+              </div>
+              <div className="flex justify-end mt-2 px-4">
+                <button
+                  onClick={() => addBudgetItem(category)}
+                  className="flex items-center gap-1 text-xs text-primary hover:bg-primary/10 border border-primary/20 hover:border-primary/40 px-3 py-1 rounded-lg transition-all cursor-pointer font-medium"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Agregar trabajo
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -300,10 +564,12 @@ function EditableItemRow({
   item,
   fmt,
   onUpdate,
+  onDelete,
 }: {
   item: BudgetItem;
   fmt: (n: number) => string;
   onUpdate: (id: string, updates: Partial<BudgetItem>) => void;
+  onDelete: (id: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState(item);
@@ -364,10 +630,10 @@ function EditableItemRow({
             />
           </div>
           <div className="col-span-2 flex items-center justify-end gap-1">
-            <button onClick={saveEdit} className="p-1 rounded text-emerald-400 hover:bg-emerald-400/10">
+            <button onClick={saveEdit} className="p-1 rounded text-emerald-400 hover:bg-emerald-400/10 cursor-pointer">
               <Check className="w-3.5 h-3.5" />
             </button>
-            <button onClick={cancelEdit} className="p-1 rounded text-muted-foreground hover:bg-secondary">
+            <button onClick={cancelEdit} className="p-1 rounded text-muted-foreground hover:bg-secondary cursor-pointer">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -388,9 +654,17 @@ function EditableItemRow({
             <span className="text-xs font-mono font-semibold text-foreground">{fmt(item.precioTotal)}</span>
             <button
               onClick={() => setEditing(true)}
-              className="opacity-0 group-hover:opacity-100 p-1 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all ml-1"
+              className="opacity-0 group-hover:opacity-100 p-1 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all ml-1 cursor-pointer"
+              title="Editar trabajo"
             >
               <Pencil className="w-3 h-3" />
+            </button>
+            <button
+              onClick={() => onDelete(item.id)}
+              className="opacity-0 group-hover:opacity-100 p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all cursor-pointer"
+              title="Eliminar trabajo"
+            >
+              <Trash2 className="w-3 h-3" />
             </button>
           </div>
         </>
