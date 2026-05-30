@@ -1,9 +1,7 @@
-// ===== OpenRouter AI Provider =====
-// Uses OpenRouter (OpenAI-compatible API) instead of Google SDK directly
-// Model: google/gemini-2.0-flash-exp:free — free tier, multimodal, JSON support
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
-const OPENROUTER_BASE_URL = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1';
+// ===== Google Gemini Native Provider =====
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyAbn9i4qHobSvzctHs1W_DelPvCGHrakbw';
 
 // ===== Xiaomi MiMo Backup API Constants =====
 const XIAOMI_API_KEY = process.env.XIAOMI_API_KEY || 'sk-svd6djtthjeabc4nx33ocpjl0ephrz5wetk18nnvyf7t8hzo';
@@ -13,13 +11,13 @@ const XIAOMI_MODEL_PRO = process.env.XIAOMI_MODEL_PRO || 'mimo-v2.5-pro';
 const XIAOMI_BASE_URL_OPENAI = process.env.XIAOMI_BASE_URL_OPENAI || 'https://api.xiaomimimo.com/v1';
 const XIAOMI_MODEL_STD = process.env.XIAOMI_MODEL_STD || 'mimo-v2.5';
 
-// ─── Modelos por tarea ────────────────────────────────────────
+// ─── Modelos nativos por tarea ────────────────────────────────────────
 // main:   redacción, parsing, generación del JSON de presupuesto
 // vision: análisis de imágenes y PDFs (Gemini — mejor multimodal)
 export const AI_MODELS = {
-  main:   'google/gemini-3.1-pro-preview',    // generación — máximo razonamiento
-  vision: 'google/gemini-3.5-flash',          // visión e imágenes
-  flash:  'google/gemini-3.5-flash',
+  main:   'gemini-1.5-pro',     // modelo principal — máximo razonamiento
+  vision: 'gemini-1.5-flash',   // modelo rápido y visual
+  flash:  'gemini-1.5-flash',
 };
 
 // ===== Message types (OpenAI-compatible) =====
@@ -39,91 +37,96 @@ export interface CallAIOptions {
   jsonMode?: boolean;
 }
 
-// ===== Core AI call via OpenRouter (with Xiaomi MiMo Backup fallback) =====
+// Inicialización del cliente nativo de Google Gen AI
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+// ===== Core AI call via Native Google Gemini API (with Xiaomi MiMo Backup fallback) =====
 export async function callAI(
   messages: AIMessage[],
   options: CallAIOptions = {}
 ): Promise<string> {
   try {
-    if (!OPENROUTER_KEY) {
-      throw new Error('[AI] OPENROUTER_API_KEY no configurada');
+    if (!GEMINI_API_KEY) {
+      throw new Error('[AI] GEMINI_API_KEY no configurada');
     }
 
     const {
       model = AI_MODELS.main,
       temperature = 0.2,
-      maxTokens = 4096,    // reducido para no exceder créditos disponibles
+      maxTokens = 4000,
       jsonMode = true,
     } = options;
 
-    const body: Record<string, unknown> = {
-      model,
-      messages,
-      temperature,
-      max_tokens: maxTokens,
-    };
+    console.log(`[AI-Gemini] Iniciando llamada directa a Google Gemini (${model})...`);
 
-    if (jsonMode) {
-      body.response_format = { type: 'json_object' };
-    }
+    // 1. Extraer el systemInstruction si existe
+    const systemMessage = messages.find(m => m.role === 'system')?.content;
+    const systemInstruction = typeof systemMessage === 'string' ? systemMessage : undefined;
 
-    const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENROUTER_KEY}`,
-        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-        'X-Title': process.env.NEXT_PUBLIC_APP_NAME || 'BudgetAI',
-      },
-      body: JSON.stringify(body),
+    // 2. Formatear los mensajes al estándar del SDK de Google Gemini
+    const contents = messages
+      .filter(m => m.role !== 'system')
+      .map(m => {
+        let parts: any[] = [];
+        if (typeof m.content === 'string') {
+          parts = [{ text: m.content }];
+        } else if (Array.isArray(m.content)) {
+          parts = m.content.map(part => {
+            if (part.type === 'text') {
+              return { text: part.text };
+            } else if (part.type === 'image_url') {
+              const url = part.image_url.url;
+              const match = url.match(/^data:(image\/[a-zA-Z+.-]+);base64,(.+)$/);
+              if (match) {
+                return {
+                  inlineData: {
+                    mimeType: match[1],
+                    data: match[2]
+                  }
+                };
+              }
+              return { text: `[Imagen: ${url}]` };
+            }
+            return { text: '' };
+          });
+        }
+        return {
+          role: m.role === 'user' ? 'user' : 'model',
+          parts
+        };
+      });
+
+    // 3. Configurar el modelo nativo
+    const modelInstance = genAI.getGenerativeModel({
+      model: model,
+      systemInstruction: systemInstruction,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      
-      // Auto-reintento con ajuste dinámico de maxTokens para créditos limitados
-      if (response.status === 402) {
-        try {
-          const errorObj = JSON.parse(errorText);
-          const message = errorObj.error?.message || '';
-          const match = message.match(/can only afford (\d+)/i);
-          if (match && match[1]) {
-            const affordTokens = parseInt(match[1], 10);
-            // Usamos un pequeño margen de seguridad de 20 tokens menos
-            const safeTokens = Math.max(200, affordTokens - 20);
-            console.warn(`[AI] Créditos limitados en OpenRouter. Reintentando de forma transparente con max_tokens: ${safeTokens}`);
-            return await callAI(messages, { ...options, maxTokens: safeTokens });
-          }
-        } catch (err) {
-          console.error('[AI] Error procesando respuesta 402:', err);
-        }
+    // 4. Llamar a la API nativa de Google
+    const result = await modelInstance.generateContent({
+      contents,
+      generationConfig: {
+        temperature: temperature,
+        maxOutputTokens: maxTokens,
+        responseMimeType: jsonMode ? 'application/json' : 'text/plain',
       }
-      
-      throw new Error(`[OpenRouter] ${response.status}: ${errorText}`);
-    }
+    });
 
-    const data = await response.json() as {
-      choices: Array<{ message: { content: string } }>;
-      error?: { message: string };
-    };
-
-    if (data.error) {
-      throw new Error(`[OpenRouter] ${data.error.message}`);
-    }
-
-    const content = data.choices?.[0]?.message?.content;
+    const content = result.response.text();
     if (!content) {
-      throw new Error('[OpenRouter] Respuesta vacía del modelo');
+      throw new Error('[AI-Gemini] Respuesta vacía del modelo nativo');
     }
 
+    console.log(`[AI-Gemini] Respuesta exitosa directa de ${model}.`);
     return content;
+
   } catch (err) {
-    console.warn('[AI] OpenRouter falló. Utilizando backup de Xiaomi MiMo API...');
+    console.warn('[AI] Google Gemini directo falló. Utilizando backup de Xiaomi MiMo API...', (err as Error).message);
     try {
       return await callXiaomi(messages, options);
     } catch (xiaomiErr) {
       console.error('[AI] Falló también el backup de Xiaomi:', xiaomiErr);
-      throw new Error(`[AI] Ambos proveedores fallaron.\nOpenRouter: ${(err as Error).message}\nXiaomi: ${(xiaomiErr as Error).message}`);
+      throw new Error(`[AI] Ambos proveedores fallaron.\nGemini Directo: ${(err as Error).message}\nXiaomi: ${(xiaomiErr as Error).message}`);
     }
   }
 }
