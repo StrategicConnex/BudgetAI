@@ -15,9 +15,9 @@ const XIAOMI_MODEL_STD = process.env.XIAOMI_MODEL_STD || 'mimo-v2.5';
 // main:   redacción, parsing, generación del JSON de presupuesto
 // vision: análisis de imágenes y PDFs (Gemini — mejor multimodal)
 export const AI_MODELS = {
-  main:   'gemini-1.5-pro',     // modelo principal — máximo razonamiento
-  vision: 'gemini-1.5-flash',   // modelo rápido y visual
-  flash:  'gemini-1.5-flash',
+  main:   'gemini-3.5-pro',     // modelo principal — máximo razonamiento
+  vision: 'gemini-3.5-flash',   // modelo rápido y visual
+  flash:  'gemini-3.5-flash',
 };
 
 // ===== Message types (OpenAI-compatible) =====
