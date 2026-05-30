@@ -39,6 +39,7 @@ interface BudgetState {
   // Export state
   isExportingPDF: boolean;
   isExportingDOCX: boolean;
+  isExportingHTML: boolean;
   exportError: string | null;
 
   // Actions
@@ -59,6 +60,7 @@ interface BudgetState {
 
   setIsExportingPDF: (loading: boolean) => void;
   setIsExportingDOCX: (loading: boolean) => void;
+  setIsExportingHTML: (loading: boolean) => void;
   setExportError: (error: string | null) => void;
 
   // Update generated budget item inline
@@ -84,6 +86,7 @@ const INITIAL_STATE = {
   budgetId: null,
   isExportingPDF: false,
   isExportingDOCX: false,
+  isExportingHTML: false,
   exportError: null,
 };
 
@@ -111,6 +114,7 @@ export const useBudgetStore = create<BudgetState>()(
 
     setIsExportingPDF: (loading) => set((state) => { state.isExportingPDF = loading; }),
     setIsExportingDOCX: (loading) => set((state) => { state.isExportingDOCX = loading; }),
+    setIsExportingHTML: (loading) => set((state) => { state.isExportingHTML = loading; }),
     setExportError: (error) => set((state) => { state.exportError = error; }),
 
     updateBudgetItem: (itemId, updates) => set((state) => {

@@ -3,7 +3,7 @@
 import { useBudgetStore } from '@/store/budget.store';
 import { formatCurrency } from '@/lib/ai/stages/validator';
 import {
-  FileDown, FileText, ArrowLeft, Pencil, Check, X,
+  FileDown, FileText, FileCode, ArrowLeft, Pencil, Check, X,
   Building2, User, Calendar, Hash, Package
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -12,8 +12,8 @@ import type { BudgetItem } from '@/types/budget';
 export default function BudgetPreview() {
   const {
     budget, currency,
-    isExportingPDF, isExportingDOCX,
-    setIsExportingPDF, setIsExportingDOCX,
+    isExportingPDF, isExportingDOCX, isExportingHTML,
+    setIsExportingPDF, setIsExportingDOCX, setIsExportingHTML,
     setExportError, exportError,
     setCurrentStep, updateBudgetItem,
     reset,
@@ -76,6 +76,31 @@ export default function BudgetPreview() {
     }
   }
 
+  async function handleExportHTML() {
+    setIsExportingHTML(true);
+    setExportError(null);
+    try {
+      const res = await fetch('/api/export/html', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ budget }),
+      });
+      if (!res.ok) throw new Error('Error generando HTML');
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `presupuesto-${b.numero || Date.now()}.html`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Error exportando HTML');
+    } finally {
+      setIsExportingHTML(false);
+    }
+  }
+
   // Group items by category
   const grouped = b.items.reduce<Record<string, BudgetItem[]>>((acc, item) => {
     const cat = item.categoria || 'General';
@@ -111,6 +136,19 @@ export default function BudgetPreview() {
               <FileText className="w-4 h-4" />
             )}
             Exportar Word
+          </button>
+          <button
+            id="btn-export-html"
+            onClick={handleExportHTML}
+            disabled={isExportingHTML}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-secondary hover:bg-secondary/80 text-foreground text-sm font-medium transition-all disabled:opacity-50"
+          >
+            {isExportingHTML ? (
+              <span className="w-4 h-4 border-2 border-muted-foreground/30 border-t-foreground rounded-full animate-spin" />
+            ) : (
+              <FileCode className="w-4 h-4" />
+            )}
+            Exportar HTML
           </button>
           <button
             id="btn-export-pdf"
