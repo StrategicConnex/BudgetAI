@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import type { BudgetData, Currency, TemplateId, ImageInput } from '@/types/budget';
+import type { BudgetData, Currency, TemplateId, ImageInput, BudgetCliente, BudgetCondiciones } from '@/types/budget';
 import type { PipelineStage } from '@/lib/ai/orchestrator';
 
 // ===== WIZARD STEPS =====
