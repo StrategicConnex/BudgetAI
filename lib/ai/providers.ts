@@ -1,10 +1,10 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // ===== Google Gemini Native Provider =====
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyAbn9i4qHobSvzctHs1W_DelPvCGHrakbw';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 // ===== Xiaomi MiMo Backup API Constants =====
-const XIAOMI_API_KEY = process.env.XIAOMI_API_KEY || 'sk-svd6djtthjeabc4nx33ocpjl0ephrz5wetk18nnvyf7t8hzo';
+const XIAOMI_API_KEY = process.env.XIAOMI_API_KEY;
 const XIAOMI_BASE_URL_ANTHROPIC = process.env.XIAOMI_BASE_URL_ANTHROPIC || 'https://api.xiaomimimo.com/anthropic/v1';
 const XIAOMI_MODEL_PRO = process.env.XIAOMI_MODEL_PRO || 'mimo-v2.5-pro';
 
