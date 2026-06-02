@@ -132,7 +132,7 @@ export async function callAI(
   }
 }
 
-// ===== Backup Provider: OpenRouter API (using Kimi-k2.6) =====
+// ===== Backup Provider: OpenRouter API (with robust model chain and JSON fallback) =====
 export async function callOpenRouter(
   messages: AIMessage[],
   options: CallAIOptions = {}
@@ -142,8 +142,6 @@ export async function callOpenRouter(
     maxTokens = 4000,
     jsonMode = true,
   } = options;
-
-  log.info('Iniciando llamada de backup a OpenRouter (Kimi-k2.6)...');
 
   if (!OPENROUTER_API_KEY) {
     throw new Error('[OpenRouter] OPENROUTER_API_KEY no configurada');
@@ -165,44 +163,81 @@ export async function callOpenRouter(
     };
   });
 
-  const body: Record<string, unknown> = {
-    model: OPENROUTER_MODEL,
-    messages: formattedMessages,
-    temperature,
-    max_tokens: maxTokens,
-  };
+  // Robust model chain to guarantee fallback availability
+  const modelsToTry = [
+    OPENROUTER_MODEL,                         // moonshotai/kimi-k2.6:free
+    'google/gemma-2-9b-it:free',              // Gemma 2 9B (Excellent at JSON parsing)
+    'meta-llama/llama-3.1-8b-instruct:free'   // Llama 3.1 8B (highly reliable fallback)
+  ];
 
-  if (jsonMode) {
-    body.response_format = { type: 'json_object' };
+  let lastError = new Error('No se pudo establecer comunicación con OpenRouter');
+
+  for (const modelToCall of modelsToTry) {
+    try {
+      log.info(`Intentando llamada de backup en OpenRouter con modelo: ${modelToCall}...`);
+
+      const body: Record<string, unknown> = {
+        model: modelToCall,
+        messages: formattedMessages,
+        temperature,
+        max_tokens: maxTokens,
+      };
+
+      if (jsonMode) {
+        body.response_format = { type: 'json_object' };
+      }
+
+      let res = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'HTTP-Referer': 'https://presupuestoai.vercel.app',
+          'X-Title': 'BudgetAI',
+        },
+        body: JSON.stringify(body),
+      });
+
+      // Si da error y estábamos usando jsonMode, reintentamos inmediatamente omitiendo response_format
+      if (!res.ok && jsonMode) {
+        log.warn(`Llamada con JSON-mode falló para ${modelToCall}. Reintentando sin response_format...`);
+        delete body.response_format;
+        res = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+            'HTTP-Referer': 'https://presupuestoai.vercel.app',
+            'X-Title': 'BudgetAI',
+          },
+          body: JSON.stringify(body),
+        });
+      }
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`[OpenRouter] ${res.status}: ${errorText}`);
+      }
+
+      const data = await res.json() as {
+        choices: Array<{ message: { content: string } }>;
+      };
+
+      const content = data.choices?.[0]?.message?.content;
+      if (!content) {
+        throw new Error(`[OpenRouter] Respuesta vacía del modelo ${modelToCall}`);
+      }
+
+      log.info(`Respuesta de backup exitosa con ${modelToCall}.`);
+      return content;
+
+    } catch (err) {
+      log.warn(`Llamada fallida con el modelo ${modelToCall}. Intentando siguiente modelo en la cadena...`, { error: (err as Error).message });
+      lastError = err as Error;
+    }
   }
 
-  const res = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-      'HTTP-Referer': 'https://presupuestoai.vercel.app',
-      'X-Title': 'BudgetAI',
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`[OpenRouter] ${res.status}: ${errorText}`);
-  }
-
-  const data = await res.json() as {
-    choices: Array<{ message: { content: string } }>;
-  };
-
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) {
-    throw new Error('[OpenRouter] Respuesta vacía del modelo de backup');
-  }
-
-  log.info('Respuesta exitosa de moonshotai/kimi-k2.6:free.');
-  return content;
+  throw lastError;
 }
 
 // ===== Utility: Retry with exponential backoff =====
