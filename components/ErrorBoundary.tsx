@@ -29,7 +29,18 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   render() {
-    if (this.state.hasError) {
+    if (this.state.hasError && this.state.error) {
+      // Re-throw Next.js internal errors (redirects, not found) so the framework handles them
+      const err = this.state.error as any;
+      if (
+        err.message === 'NEXT_REDIRECT' ||
+        err.message === 'NEXT_NOT_FOUND' ||
+        err.digest?.startsWith('NEXT_REDIRECT') ||
+        err.digest?.startsWith('NEXT_NOT_FOUND')
+      ) {
+        throw err;
+      }
+
       if (this.props.fallback) return this.props.fallback;
 
       return (
