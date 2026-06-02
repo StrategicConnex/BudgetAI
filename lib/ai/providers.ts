@@ -6,13 +6,10 @@ const log = createLogger('AI-Providers');
 // ===== Google Gemini Native Provider =====
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 
-// ===== Xiaomi MiMo Backup API Constants =====
-const XIAOMI_API_KEY = process.env.XIAOMI_API_KEY || '';
-const XIAOMI_BASE_URL_ANTHROPIC = process.env.XIAOMI_BASE_URL_ANTHROPIC || 'https://api.xiaomimimo.com/anthropic/v1';
-const XIAOMI_MODEL_PRO = process.env.XIAOMI_MODEL_PRO || 'mimo-v2.5-pro';
-
-const XIAOMI_BASE_URL_OPENAI = process.env.XIAOMI_BASE_URL_OPENAI || 'https://api.xiaomimimo.com/v1';
-const XIAOMI_MODEL_STD = process.env.XIAOMI_MODEL_STD || 'mimo-v2.5';
+// ===== OpenRouter Backup API Constants =====
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
+const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
+const OPENROUTER_MODEL = 'moonshotai/kimi-k2.6:free';
 
 // ─── Modelos nativos por tarea ────────────────────────────────────────
 // main:   redacción, parsing, generación del JSON de presupuesto
@@ -124,19 +121,19 @@ export async function callAI(
     return content;
 
   } catch (err) {
-    log.warn('Google Gemini directo falló. Utilizando backup de Xiaomi MiMo API...', { error: (err as Error).message });
+    log.warn('Google Gemini directo falló. Utilizando backup de OpenRouter (Kimi)...', { error: (err as Error).message });
     try {
-      return await callXiaomi(messages, options);
-    } catch (xiaomiErr) {
-      log.error('Falló también el backup de Xiaomi', xiaomiErr instanceof Error ? xiaomiErr : undefined);
+      return await callOpenRouter(messages, options);
+    } catch (routerErr) {
+      log.error('Falló también el backup de OpenRouter', routerErr instanceof Error ? routerErr : undefined);
       // V-05: No exponer detalles internos de proveedores en errores al cliente
       throw new Error('[AI] No se pudo generar el presupuesto. Servicio temporalmente no disponible. Intentalo de nuevo en unos minutos.');
     }
   }
 }
 
-// ===== Backup Provider: Xiaomi MiMo API (supports Anthropic and OpenAI formats) =====
-export async function callXiaomi(
+// ===== Backup Provider: OpenRouter API (using Kimi-k2.6) =====
+export async function callOpenRouter(
   messages: AIMessage[],
   options: CallAIOptions = {}
 ): Promise<string> {
@@ -146,65 +143,31 @@ export async function callXiaomi(
     jsonMode = true,
   } = options;
 
-  log.info('Iniciando llamada de backup a Xiaomi MiMo API...');
+  log.info('Iniciando llamada de backup a OpenRouter (Kimi-k2.6)...');
 
-  try {
-    // 1. Intentamos con el modelo Pro (Anthropic Compatible) que ofrece mayor razonamiento
-    const systemMessage = messages.find(m => m.role === 'system')?.content || '';
-    const systemStr = typeof systemMessage === 'string' ? systemMessage : '';
-    
-    const anthropicMessages = messages
-      .filter(m => m.role !== 'system')
-      .map(m => {
-        let contentStr = '';
-        if (typeof m.content === 'string') {
-          contentStr = m.content;
-        } else if (Array.isArray(m.content)) {
-          contentStr = m.content
-            .filter(part => part.type === 'text')
-            .map(part => (part as TextPart).text)
-            .join('\n');
-        }
-        return {
-          role: m.role === 'user' ? 'user' : 'assistant' as const,
-          content: contentStr,
-        };
-      });
-
-    const res = await fetch(`${XIAOMI_BASE_URL_ANTHROPIC}/messages`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': XIAOMI_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: XIAOMI_MODEL_PRO,
-        max_tokens: maxTokens,
-        system: systemStr,
-        messages: anthropicMessages,
-        temperature,
-      }),
-    });
-
-    if (res.ok) {
-      const data = await res.json() as { content: Array<{ type: string; text: string }> };
-      const content = data.content?.[0]?.text;
-      if (content) {
-        log.info('Respuesta exitosa de mimo-v2.5-pro (Anthropic Format).');
-        return content;
-      }
-    }
-    
-    log.warn('Falló la API Anthropic de Xiaomi. Intentando con la API OpenAI de Xiaomi (mimo-v2.5)...');
-  } catch (err) {
-    log.warn(`Error en canal Anthropic de Xiaomi: ${(err as Error).message}. Intentando canal OpenAI...`);
+  if (!OPENROUTER_API_KEY) {
+    throw new Error('[OpenRouter] OPENROUTER_API_KEY no configurada');
   }
 
-  // 2. Fallback al canal OpenAI Compatible (mimo-v2.5)
+  const formattedMessages = messages.map(m => {
+    let contentStr = '';
+    if (typeof m.content === 'string') {
+      contentStr = m.content;
+    } else if (Array.isArray(m.content)) {
+      contentStr = m.content
+        .filter(part => part.type === 'text')
+        .map(part => (part as TextPart).text)
+        .join('\n');
+    }
+    return {
+      role: m.role,
+      content: contentStr,
+    };
+  });
+
   const body: Record<string, unknown> = {
-    model: XIAOMI_MODEL_STD,
-    messages,
+    model: OPENROUTER_MODEL,
+    messages: formattedMessages,
     temperature,
     max_tokens: maxTokens,
   };
@@ -213,18 +176,20 @@ export async function callXiaomi(
     body.response_format = { type: 'json_object' };
   }
 
-  const res = await fetch(`${XIAOMI_BASE_URL_OPENAI}/chat/completions`, {
+  const res = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${XIAOMI_API_KEY}`,
+      'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+      'HTTP-Referer': 'https://presupuestoai.vercel.app',
+      'X-Title': 'BudgetAI',
     },
     body: JSON.stringify(body),
   });
 
   if (!res.ok) {
     const errorText = await res.text();
-    throw new Error(`[Xiaomi MiMo] ${res.status}: ${errorText}`);
+    throw new Error(`[OpenRouter] ${res.status}: ${errorText}`);
   }
 
   const data = await res.json() as {
@@ -233,10 +198,10 @@ export async function callXiaomi(
 
   const content = data.choices?.[0]?.message?.content;
   if (!content) {
-    throw new Error('[Xiaomi MiMo] Respuesta vacía del modelo de backup');
+    throw new Error('[OpenRouter] Respuesta vacía del modelo de backup');
   }
 
-  log.info('Respuesta exitosa de mimo-v2.5 (OpenAI Format).');
+  log.info('Respuesta exitosa de moonshotai/kimi-k2.6:free.');
   return content;
 }
 
