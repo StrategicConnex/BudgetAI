@@ -10,6 +10,7 @@ import { formatCurrency } from '@/lib/ai/stages/validator';
 import {
   FileDown, FileText, FileCode, ArrowLeft,
   Pencil, Check, X, User, Package, Plus, Copy,
+  Eye, Printer, Download
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ShareBudgetButton from '@/components/budget/ShareBudgetButton';
@@ -78,6 +79,8 @@ export default function BudgetPreview() {
 
   const b = budget;
   const fmt = (n: number) => formatCurrency(n, b.totales.currency);
+
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   // ── Edit state ─────────────────────────────────
   const [editingHeader, setEditingHeader] = useState(false);
@@ -165,6 +168,14 @@ export default function BudgetPreview() {
             budgetTitle={b.titulo}
             budgetData={b}
           />
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<Eye className="w-4 h-4" />}
+            onClick={() => setShowPreviewModal(true)}
+          >
+            Previsualizar
+          </Button>
           <Button
             id="btn-export-docx"
             variant="secondary"
@@ -361,6 +372,201 @@ export default function BudgetPreview() {
           Generar nuevo presupuesto
         </Button>
       </div>
+
+      {showPreviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fade-in overflow-y-auto">
+          <div className="relative w-full max-w-4xl bg-background border border-border rounded-2xl shadow-2xl overflow-hidden my-8 flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-secondary/30">
+              <div className="flex items-center gap-2">
+                <Eye className="w-5 h-5 text-primary" />
+                <h3 className="text-base font-bold text-foreground">Vista Previa del Documento</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={<Printer className="w-4 h-4" />}
+                  onClick={() => {
+                    const printContents = document.getElementById('printable-budget-preview')?.innerHTML;
+                    if (printContents) {
+                      const printWindow = window.open('', '_blank');
+                      printWindow?.document.write(`
+                        <html>
+                          <head>
+                            <title>Presupuesto - ${b.titulo}</title>
+                            <style>
+                              body { font-family: system-ui, sans-serif; color: #111827; padding: 40px; background: #fff; }
+                              .border-b { border-bottom: 1px solid #e5e7eb; }
+                              .border-r { border-right: 1px solid #e5e7eb; }
+                              .text-right { text-align: right; }
+                              .grid { display: grid; }
+                              .grid-cols-2 { grid-template-columns: 1fr 1fr; }
+                              .grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+                              .col-span-5 { grid-column: span 5 / span 5; }
+                              .col-span-2 { grid-column: span 2 / span 2; }
+                              .col-span-1 { grid-column: span 1 / span 1; }
+                              .font-mono { font-family: monospace; }
+                              .font-bold { font-weight: bold; }
+                              .text-sm { font-size: 14px; }
+                              .text-xs { font-size: 12px; }
+                              .text-xl { font-size: 20px; }
+                              .mb-4 { margin-bottom: 16px; }
+                              .py-2 { padding-top: 8px; padding-bottom: 8px; }
+                              .px-4 { padding-left: 16px; padding-right: 16px; }
+                              .rounded-lg { border-radius: 8px; }
+                              .text-white { color: #fff; }
+                              .bg-primary { background-color: #4f46e5; }
+                              .text-primary { color: #4f46e5; }
+                              .text-muted { color: #6b7280; }
+                              .mt-4 { margin-top: 16px; }
+                              .flex { display: flex; }
+                              .justify-between { justify-content: space-between; }
+                              .justify-end { justify-content: flex-end; }
+                              .w-72 { width: 288px; }
+                              .space-y-2 > * + * { margin-top: 8px; }
+                              .gap-2 { gap: 8px; }
+                              .gap-4 { gap: 16px; }
+                              .thumbnail-gallery { display: flex; gap: 8px; margin-top: 8px; }
+                              .thumbnail { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #d1d5db; }
+                            </style>
+                          </head>
+                          <body>
+                            ${printContents}
+                          </body>
+                        </html>
+                      `);
+                      printWindow?.document.close();
+                      printWindow?.focus();
+                      printWindow?.print();
+                    }
+                  }}
+                >
+                  Imprimir
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={<X className="w-4 h-4" />}
+                  onClick={() => setShowPreviewModal(false)}
+                >
+                  Cerrar
+                </Button>
+              </div>
+            </div>
+
+            {/* Modal Body / Sheet View */}
+            <div className="flex-1 overflow-y-auto p-6 bg-secondary/10 flex justify-center">
+              <div
+                id="printable-budget-preview"
+                className="w-full max-w-3xl bg-card border border-border rounded-xl shadow-lg p-8 md:p-12 relative text-foreground"
+              >
+                {/* Header Letterhead */}
+                <div className="flex justify-between items-start pb-6 border-b border-border">
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider font-semibold text-primary px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20">{b.categoria}</span>
+                    <h2 className="text-xl font-bold text-foreground mt-3">{b.titulo}</h2>
+                    <p className="text-xs text-muted-foreground mt-1 max-w-xl leading-relaxed">{b.descripcionGeneral}</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-primary font-mono">{b.numero || 'Nº —'}</div>
+                    <div className="text-[10px] text-muted-foreground mt-1">
+                      {b.createdAt ? new Date(b.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' }) : new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Info Grid */}
+                <div className="grid grid-cols-2 gap-8 py-6 border-b border-border text-xs">
+                  <div>
+                    <h4 className="font-bold text-primary uppercase tracking-wider mb-2 text-[9px]">Cliente</h4>
+                    <div className="space-y-0.5">
+                      <div className="font-semibold text-foreground">{b.cliente.nombre}</div>
+                      {b.cliente.empresa && <div className="text-muted-foreground">{b.cliente.empresa}</div>}
+                      {b.cliente.email && <div className="text-muted-foreground">{b.cliente.email}</div>}
+                      {b.cliente.cuit && <div className="text-muted-foreground font-mono">CUIT: {b.cliente.cuit}</div>}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-primary uppercase tracking-wider mb-2 text-[9px]">Condiciones</h4>
+                    <div className="space-y-1">
+                      <div><span className="text-muted-foreground">Validez de oferta:</span> <span className="font-medium text-foreground">{b.condiciones.validezDias} días</span></div>
+                      <div><span className="text-muted-foreground">Forma de pago:</span> <span className="font-medium text-foreground">{b.condiciones.formaPago}</span></div>
+                      {b.condiciones.notas && <div className="text-muted-foreground/80 mt-1 italic">"{b.condiciones.notas}"</div>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Items */}
+                <div className="py-6">
+                  <h4 className="font-bold text-foreground uppercase tracking-wider mb-4 text-[10px]">Detalle de Trabajos</h4>
+                  
+                  {/* Table headers */}
+                  <div className="grid grid-cols-12 gap-2 pb-2 border-b border-border text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
+                    <span className="col-span-5">Descripción</span>
+                    <span className="col-span-2">Unidad</span>
+                    <span className="col-span-1 text-right">Cant.</span>
+                    <span className="col-span-2 text-right">P. Unit</span>
+                    <span className="col-span-2 text-right">Total</span>
+                  </div>
+
+                  {/* List grouped */}
+                  <div className="divide-y divide-border/30">
+                    {Object.entries(grouped).map(([category, items]) => (
+                      <div key={category} className="py-2">
+                        <div className="text-[10px] font-bold text-primary uppercase tracking-wider bg-primary/5 py-1 px-3 rounded mb-1">{category}</div>
+                        {items.map(item => (
+                          <div key={item.id} className="grid grid-cols-12 gap-2 py-3 text-xs">
+                            <div className="col-span-5 space-y-1">
+                              <div className="font-semibold text-foreground">{item.titulo}</div>
+                              <div className="text-[11px] text-muted-foreground leading-relaxed">{item.descripcion}</div>
+                              {/* Item images */}
+                              {item.imagenes && item.imagenes.length > 0 && (
+                                <div className="thumbnail-gallery flex flex-wrap gap-1.5 mt-2">
+                                  {item.imagenes.map((img, i) => (
+                                    <img
+                                      key={i}
+                                      src={img}
+                                      alt={`Imágen ${i+1}`}
+                                      className="thumbnail w-12 h-12 object-cover rounded border border-border/50"
+                                    />
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <div className="col-span-2 text-muted-foreground">{item.unidad}</div>
+                            <div className="col-span-1 text-right font-mono text-foreground">{item.cantidad}</div>
+                            <div className="col-span-2 text-right font-mono text-foreground">{fmt(item.precioUnitario)}</div>
+                            <div className="col-span-2 text-right font-mono font-semibold text-foreground">{fmt(item.precioTotal)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Totals */}
+                <div className="pt-6 border-t border-border flex justify-end">
+                  <div className="w-64 space-y-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span className="font-mono font-medium text-foreground">{fmt(b.totales.subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">IVA ({Math.round(b.totales.tasaImpuesto * 100)}%)</span>
+                      <span className="font-mono font-medium text-foreground">{fmt(b.totales.impuestos)}</span>
+                    </div>
+                    <div className="flex justify-between items-center px-4 py-2.5 rounded-lg bg-primary/10 border border-primary/20 text-primary font-bold text-sm mt-2">
+                      <span>TOTAL</span>
+                      <span className="font-mono text-base">{fmt(b.totales.total)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -592,6 +798,22 @@ function EditableItemRow({
             <div className="text-sm font-medium text-foreground">{item.titulo}</div>
             <div className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{item.descripcion}</div>
             {item.observaciones && <div className="text-[10px] text-primary mt-1 italic">* {item.observaciones}</div>}
+            {item.imagenes && item.imagenes.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {item.imagenes.map((img, i) => (
+                  <img
+                    key={i}
+                    src={img}
+                    alt={`Foto ${i + 1}`}
+                    className="w-8 h-8 object-cover rounded border border-border/50 hover:scale-105 transition-transform cursor-pointer"
+                    onClick={() => {
+                      const win = window.open();
+                      win?.document.write(`<img src="${img}" style="max-width:100%; max-height:100vh; display:block; margin:auto;" />`);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
           <div className="col-span-2 text-xs text-muted-foreground">{item.unidad}</div>
           <div className="col-span-1 text-xs text-right font-mono text-foreground">{item.cantidad}</div>

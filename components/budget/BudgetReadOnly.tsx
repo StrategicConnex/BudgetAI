@@ -188,6 +188,22 @@ export default function BudgetReadOnly({ budget, budgetId, expiresAt }: BudgetRe
                         <div className="text-sm font-medium text-foreground">{item.titulo}</div>
                         <div className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{item.descripcion}</div>
                         {item.observaciones && <div className="text-[10px] text-primary mt-1 italic">* {item.observaciones}</div>}
+                        {item.imagenes && item.imagenes.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {item.imagenes.map((img, i) => (
+                              <img
+                                key={i}
+                                src={img}
+                                alt={`Foto ${i + 1}`}
+                                className="w-8 h-8 object-cover rounded border border-border/50 hover:scale-105 transition-transform cursor-pointer"
+                                onClick={() => {
+                                  const win = window.open();
+                                  win?.document.write(`<img src="${img}" style="max-width:100%; max-height:100vh; display:block; margin:auto;" />`);
+                                }}
+                              />
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="col-span-2 text-xs text-muted-foreground">{item.unidad}</div>
                       <div className="col-span-1 text-xs text-right font-mono text-foreground">{item.cantidad}</div>
