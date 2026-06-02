@@ -37,6 +37,18 @@ function getHeaderImageBase64(): string {
   }
 }
 
+function renderItemImages(imagenes?: string[]): string {
+  if (!imagenes || imagenes.length === 0) return '';
+  return `
+    <div class="item-images" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; margin-bottom: 4px;">
+      ${imagenes.map(img => {
+        const src = img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`;
+        return `<img src="${src}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid #c5cfe8;" />`;
+      }).join('')}
+    </div>
+  `;
+}
+
 function buildItemRows(items: BudgetItem[], fmt: (n: number) => string): string {
   let rows = '';
   let alternate = false;
@@ -44,10 +56,13 @@ function buildItemRows(items: BudgetItem[], fmt: (n: number) => string): string 
     const bg = alternate ? PRIMARY_LIGHT : WHITE;
     rows += `
       <tr style="background:${bg};">
-        <td style="padding:9px 14px;font-size:10pt;color:${TEXT_MED};vertical-align:top;border-bottom:1px solid #d0d9ec;">
-          ${escapeHtml(item.titulo)}
+        <td style="padding:12px 14px;font-size:10pt;color:${TEXT_MED};vertical-align:top;border-bottom:1px solid #d0d9ec;">
+          <div style="font-weight:700;color:${TEXT};margin-bottom:4px;">${escapeHtml(item.titulo)}</div>
+          ${item.descripcion ? `<div style="font-size:9pt;color:#555;margin-bottom:4px;line-height:1.4;">${escapeHtml(item.descripcion)}</div>` : ''}
+          ${renderItemImages(item.imagenes)}
+          ${item.observaciones ? `<div style="font-size:8.5pt;color:${PRIMARY};font-style:italic;margin-top:4px;">* ${escapeHtml(item.observaciones)}</div>` : ''}
         </td>
-        <td style="padding:9px 14px;font-size:10.5pt;font-weight:700;color:${TEXT};vertical-align:top;border-bottom:1px solid #d0d9ec;white-space:nowrap;">
+        <td style="padding:12px 14px;font-size:10.5pt;font-weight:700;color:${TEXT};vertical-align:top;border-bottom:1px solid #d0d9ec;white-space:nowrap;">
           ${fmt(item.precioTotal)}
         </td>
       </tr>`;

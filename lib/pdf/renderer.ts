@@ -23,6 +23,18 @@ function groupItemsByCategory(items: BudgetItem[]): Map<string, BudgetItem[]> {
   return groups;
 }
 
+function renderItemImages(imagenes?: string[]): string {
+  if (!imagenes || imagenes.length === 0) return '';
+  return `
+    <div class="item-images" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; margin-bottom: 4px;">
+      ${imagenes.map(img => {
+        const src = img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`;
+        return `<img src="${src}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid #d0d9ec;" />`;
+      }).join('')}
+    </div>
+  `;
+}
+
 export function renderBudgetHTML(budget: BudgetData): string {
   const { cliente, empresa, items, totales, condiciones, numero } = budget;
   const grouped = groupItemsByCategory(items);
@@ -43,6 +55,7 @@ export function renderBudgetHTML(budget: BudgetData): string {
           <td>
             <div class="item-titulo">${escapeHtml(item.titulo)}</div>
             <div class="item-descripcion">${escapeHtml(item.descripcion)}</div>
+            ${renderItemImages(item.imagenes)}
             ${item.observaciones ? `<div class="item-observacion">* ${escapeHtml(item.observaciones)}</div>` : ''}
           </td>
           <td>${escapeHtml(item.unidad)}</td>
