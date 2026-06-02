@@ -5,7 +5,7 @@ import { createLogger } from '@/lib/logger';
 const log = createLogger('SupabaseServer');
 
 function getStaticEnv(name: string, staticValue: string | undefined): string {
-  const value = staticValue || process.env[name];
+  const value = staticValue || process.env[name] || process.env[name.replace('NEXT_PUBLIC_', '')];
   if (!value) {
     if (process.env.NODE_ENV === 'production') {
       const availableKeys = Object.keys(process.env).filter(k => k.includes('SUPABASE') || k.includes('URL') || k.includes('KEY'));
