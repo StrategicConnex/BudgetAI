@@ -104,6 +104,51 @@
     --sidebar-accent: 239 84% 67%;
     --sidebar-accent-foreground: 0 0% 100%;
   }
+
+  .light {
+    /* Light mode tokens override */
+    --background: 210 40% 98%;
+    --foreground: 222 47% 5%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 5%;
+
+    --primary: 239 84% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 94%;
+    --secondary-foreground: 222 47% 5%;
+
+    --muted: 210 40% 94%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 239 84% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 40% 90%;
+    --input: 210 40% 94%;
+    --ring: 239 84% 60%;
+
+    /* Brand colors stays similar but slightly adjusted for light contrast */
+    --brand-primary: 239 84% 60%;
+    --brand-secondary: 262 80% 58%;
+
+    /* Surface hierarchy */
+    --surface-0: 210 40% 98%;
+    --surface-1: 0 0% 100%;
+    --surface-2: 210 40% 95%;
+    --surface-3: 210 40% 91%;
+
+    /* Sidebar */
+    --sidebar-background: 210 40% 95%;
+    --sidebar-foreground: 222 47% 5%;
+    --sidebar-border: 210 40% 90%;
+    --sidebar-accent: 239 84% 60%;
+    --sidebar-accent-foreground: 0 0% 100%;
+  }
 }
 
 /* ===== TYPOGRAPHY ===== */
