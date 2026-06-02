@@ -76,9 +76,9 @@ export function renderConstructionHTML(budget: BudgetData): string {
   const fmt = (n: number) => formatCurrency(n, totales.currency);
   const headerImg = getHeaderImageBase64();
 
-  const empresaNombre = empresa?.nombre || 'YPY Construcciones';
-  const empresaTelefono = empresa?.telefono || '';
-  const empresaEmail = empresa?.email || '';
+  const empresaNombre = empresa?.nombre || 'Rubén Curruhuinca';
+  const empresaTelefono = empresa?.telefono || '299 410 7681';
+  const empresaEmail = empresa?.email || 'rcurihuincaYPYoil@gmail.com';
 
   const itemRows = buildItemRows(items, fmt);
 
@@ -420,7 +420,7 @@ export function renderConstructionHTML(budget: BudgetData): string {
 
     <!-- FOOTER -->
     <div class="budget-footer">
-      ${escapeHtml(empresaNombre)} — Innovative Energy Solutions
+      ${escapeHtml(empresaNombre)}
     </div>
 
   </div>

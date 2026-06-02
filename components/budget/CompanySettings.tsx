@@ -34,7 +34,13 @@ export function saveCompanyData(data: CompanyData): void {
 }
 
 function getDefaultCompany(): CompanyData {
-  return { nombre: '', email: '', telefono: '', direccion: '', cuit: '' };
+  return {
+    nombre: 'Rubén Curruhuinca',
+    email: 'rcurihuincaYPYoil@gmail.com',
+    telefono: '299 410 7681',
+    direccion: '',
+    cuit: ''
+  };
 }
 
 export default function CompanySettings({ disabled }: { disabled?: boolean }) {

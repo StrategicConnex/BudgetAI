@@ -39,6 +39,12 @@ export function renderBudgetHTML(budget: BudgetData): string {
   const { cliente, empresa, items, totales, condiciones, numero } = budget;
   const grouped = groupItemsByCategory(items);
 
+  const empNombre = empresa?.nombre || 'Rubén Curruhuinca';
+  const empEmail = empresa?.email || 'rcurihuincaYPYoil@gmail.com';
+  const empTelefono = empresa?.telefono || '299 410 7681';
+  const empDireccion = empresa?.direccion || '';
+  const empCuit = empresa?.cuit || '';
+
   const fmt = (n: number) => formatCurrency(n, totales.currency);
 
   // Build items rows
@@ -114,9 +120,9 @@ export function renderBudgetHTML(budget: BudgetData): string {
     <!-- HEADER -->
     <header class="budget-header">
       <div>
-        <div class="budget-logo">${escapeHtml(empresa?.nombre || 'BudgetAI')}</div>
-        ${empresa?.email ? `<div class="party-detail">${escapeHtml(empresa.email)}</div>` : ''}
-        ${empresa?.telefono ? `<div class="party-detail">${escapeHtml(empresa.telefono)}</div>` : ''}
+        <div class="budget-logo">${escapeHtml(empNombre)}</div>
+        ${empEmail ? `<div class="party-detail">${escapeHtml(empEmail)}</div>` : ''}
+        ${empTelefono ? `<div class="party-detail">${escapeHtml(empTelefono)}</div>` : ''}
       </div>
       <div class="budget-meta">
         <div class="budget-number">${escapeHtml(numero || 'PRES-001')}</div>
@@ -140,12 +146,12 @@ export function renderBudgetHTML(budget: BudgetData): string {
       </div>
       <div class="party-block">
         <div class="party-label">Proveedor</div>
-        <div class="party-name">${escapeHtml(empresa?.nombre || 'BudgetAI')}</div>
+        <div class="party-name">${escapeHtml(empNombre)}</div>
         <div class="party-detail">
-          ${empresa?.email ? `${escapeHtml(empresa.email)}<br>` : ''}
-          ${empresa?.telefono ? `Tel: ${escapeHtml(empresa.telefono)}<br>` : ''}
-          ${empresa?.direccion ? escapeHtml(empresa.direccion) : ''}
-          ${empresa?.cuit ? `<br>CUIT: ${escapeHtml(empresa.cuit)}` : ''}
+          ${empEmail ? `${escapeHtml(empEmail)}<br>` : ''}
+          ${empTelefono ? `Tel: ${escapeHtml(empTelefono)}<br>` : ''}
+          ${empDireccion ? escapeHtml(empDireccion) : ''}
+          ${empCuit ? `<br>CUIT: ${escapeHtml(empCuit)}` : ''}
         </div>
       </div>
     </div>
@@ -209,8 +215,8 @@ export function renderBudgetHTML(budget: BudgetData): string {
     <!-- FOOTER -->
     <footer class="budget-footer">
       <div>
-        <div>${escapeHtml(empresa?.nombre || 'BudgetAI')}</div>
-        ${empresa?.cuit ? `<div>CUIT: ${escapeHtml(empresa.cuit)}</div>` : ''}
+        <div>${escapeHtml(empNombre)}</div>
+        ${empCuit ? `<div>CUIT: ${escapeHtml(empCuit)}</div>` : ''}
       </div>
       <div class="footer-signature">
         <div class="signature-line"></div>
