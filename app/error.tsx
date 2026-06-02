@@ -28,11 +28,11 @@ export default function GlobalError({
         <p className="text-muted-foreground text-sm mb-6">
           Ocurrio un error inesperado. Podes intentar recargar la pagina.
         </p>
-        {process.env.NODE_ENV === 'development' && (
-          <pre className="text-xs text-destructive/80 bg-destructive/5 border border-destructive/10 rounded-lg p-3 mb-6 text-left overflow-auto max-h-32">
-            {error.message}
-          </pre>
-        )}
+        <pre className="text-xs text-destructive/80 bg-destructive/5 border border-destructive/10 rounded-lg p-3 mb-6 text-left overflow-auto max-h-32">
+          {error.message || 'Error desconocido sin mensaje'}
+          {'\n\n'}
+          {error.stack}
+        </pre>
         <div className="flex gap-3 justify-center">
           <Button variant="ghost" size="sm" onClick={() => reset()} icon={<RefreshCw className="w-4 h-4" />}>
             Reintentar
