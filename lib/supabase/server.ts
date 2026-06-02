@@ -8,7 +8,8 @@ function getStaticEnv(name: string, staticValue: string | undefined): string {
   const value = staticValue || process.env[name];
   if (!value) {
     if (process.env.NODE_ENV === 'production') {
-      throw new Error(`[Supabase] Variable de entorno faltante: ${name}. Configurala en las Environment Variables de Vercel.`);
+      const availableKeys = Object.keys(process.env).filter(k => k.includes('SUPABASE') || k.includes('URL') || k.includes('KEY'));
+      throw new Error(`[Supabase] Variable de entorno faltante: ${name}. Configurala en las Environment Variables de Vercel. Diagnostics: NODE_ENV=${process.env.NODE_ENV}, staticValue=${staticValue ? 'defined' : 'undefined'}, process.env[name]=${process.env[name] ? 'defined' : 'undefined'}, Available matching keys: ${availableKeys.join(', ')}`);
     }
     log.warn(`Variable de entorno faltante: ${name}. Usando placeholder para desarrollo.`);
     return `placeholder-${name.toLowerCase()}`;
