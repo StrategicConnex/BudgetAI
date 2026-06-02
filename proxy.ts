@@ -97,22 +97,29 @@ export default async function proxy(request: NextRequest) {
 
         // Verificar que el origin sea el nuestro
         if (origin) {
+          const host = request.headers.get('host');
+          const proto = request.headers.get('x-forwarded-proto') || 'https';
+          const selfOrigin = host ? `${proto}://${host}` : null;
+
           const allowedOrigins = [
             process.env.NEXT_PUBLIC_APP_URL,
+            selfOrigin,
             'http://localhost:3000',
             'http://localhost:3001',
-          ].filter(Boolean);
+          ].filter(Boolean) as string[];
 
           const isValid = allowedOrigins.some(allowed => {
             if (!allowed) return false;
-            if (allowed.includes('supabase.co')) {
-              return origin.endsWith('.supabase.co') || origin === allowed;
+            // Remover barra final para normalizar comparación de origin
+            const normalizedAllowed = allowed.replace(/\/$/, '');
+            if (normalizedAllowed.includes('supabase.co')) {
+              return origin.endsWith('.supabase.co') || origin === normalizedAllowed;
             }
-            return origin === allowed;
+            return origin === normalizedAllowed;
           });
 
           if (!isValid) {
-            return csrfError('CSRF: Origin no permitido');
+            return csrfError(`CSRF: Origin no permitido (${origin})`);
           }
         }
       }
