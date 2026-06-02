@@ -5,14 +5,15 @@ import { createLogger } from '@/lib/logger';
 const log = createLogger('SupabaseServer');
 
 function getStaticEnv(name: string, staticValue: string | undefined): string {
-  if (!staticValue) {
+  const value = staticValue || process.env[name];
+  if (!value) {
     if (process.env.NODE_ENV === 'production') {
       throw new Error(`[Supabase] Variable de entorno faltante: ${name}. Configurala en las Environment Variables de Vercel.`);
     }
     log.warn(`Variable de entorno faltante: ${name}. Usando placeholder para desarrollo.`);
     return `placeholder-${name.toLowerCase()}`;
   }
-  return staticValue;
+  return value;
 }
 
 export async function createClient() {
