@@ -1,17 +1,20 @@
 'use client';
 
 import { Toaster as Sonner } from 'sonner';
+import { useTheme } from 'next-themes';
 
 export function Toaster() {
+  const { theme = 'system' } = useTheme();
+
   return (
     <Sonner
-      theme="dark"
+      theme={theme as any}
       position="bottom-right"
       toastOptions={{
         style: {
-          background: 'hsl(222 47% 8%)',
-          border: '1px solid hsl(222 47% 14%)',
-          color: 'hsl(210 40% 98%)',
+          background: 'hsl(var(--card))',
+          border: '1px solid hsl(var(--border))',
+          color: 'hsl(var(--foreground))',
           fontSize: '14px',
           borderRadius: '12px',
         },
