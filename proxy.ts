@@ -23,7 +23,7 @@ const SECURITY_HEADERS = {
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
 };
 
-export async function middleware(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   // Agregar security headers a todas las respuestas
