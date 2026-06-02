@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -9,8 +10,11 @@ import {
   Plus,
   LogOut,
   Sparkles,
-  ChevronRight,
+  Menu,
+  X,
+  Search,
 } from 'lucide-react';
+import ThemeToggle from '@/components/dashboard/ThemeToggle';
 
 const NAV_ITEMS = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -26,6 +30,12 @@ export default function Sidebar({ userEmail }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Close mobile sidebar on navigation
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -33,7 +43,18 @@ export default function Sidebar({ userEmail }: SidebarProps) {
     router.refresh();
   }
 
-  return (
+  // Mobile hamburger button (rendered outside sidebar)
+  const mobileToggle = (
+    <button
+      onClick={() => setMobileOpen(true)}
+      className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-card/90 backdrop-blur-sm border border-border text-muted-foreground hover:text-foreground transition-colors"
+      title="Menú"
+    >
+      <Menu className="w-5 h-5" />
+    </button>
+  );
+
+  const sidebarContent = (
     <aside className="w-64 flex-shrink-0 flex flex-col border-r border-border bg-sidebar-background">
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
@@ -62,7 +83,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
         >
           <Sparkles className="w-4 h-4" />
           Generar presupuesto
-          <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-70" />
+          <svg className="w-3.5 h-3.5 ml-auto opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
         </Link>
       </div>
 
@@ -79,7 +100,11 @@ export default function Sidebar({ userEmail }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
-              className={`nav-item ${isActive ? 'active' : ''}`}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-all duration-150 ${
+                isActive
+                  ? 'bg-primary/10 text-primary border border-primary/20'
+                  : 'hover:bg-secondary hover:text-foreground'
+              }`}
             >
               <Icon className="w-4 h-4 flex-shrink-0" />
               {item.label}
@@ -87,6 +112,14 @@ export default function Sidebar({ userEmail }: SidebarProps) {
           );
         })}
       </nav>
+
+      {/* Theme + Keyboard hint */}
+      <div className="px-4 pt-3 flex items-center justify-between">
+        <ThemeToggle />
+        <kbd className="text-[9px] text-muted-foreground bg-secondary/60 px-1.5 py-0.5 rounded border border-border hidden lg:inline-flex items-center gap-1">
+          <Search className="w-2.5 h-2.5" /> Ctrl+K
+        </kbd>
+      </div>
 
       {/* User */}
       <div className="p-4 border-t border-sidebar-border">
@@ -96,7 +129,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-xs font-medium text-foreground truncate">{userEmail}</div>
-            <div className="text-[10px] text-muted-foreground">Plan gratuito</div>
+            <div className="text-[10px] text-muted-foreground"> usuario</div>
           </div>
           <button
             onClick={handleLogout}
@@ -108,5 +141,35 @@ export default function Sidebar({ userEmail }: SidebarProps) {
         </div>
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      {mobileToggle}
+      {/* Desktop sidebar */}
+      <div className="hidden lg:block">
+        {sidebarContent}
+      </div>
+      {/* Mobile sidebar overlay */}
+      {mobileOpen && (
+        <div className="lg:hidden fixed inset-0 z-40">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setMobileOpen(false)}
+          />
+          <div className="absolute left-0 top-0 bottom-0 animate-slide-in-left">
+            <div className="relative">
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="absolute top-5 right-5 z-50 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              {sidebarContent}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

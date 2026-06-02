@@ -2,7 +2,10 @@ import { analyzeImages, buildVisionSummary } from './stages/vision';
 import { parseInput } from './stages/parser';
 import { generateBudget } from './stages/generator';
 import { validateAndFinalize } from './stages/validator';
+import { createLogger } from '@/lib/logger';
 import type { RawInput, BudgetData } from '@/types/budget';
+
+const log = createLogger('Orchestrator');
 
 export type PipelineStage =
   | 'vision'
@@ -44,7 +47,7 @@ export async function generateBudgetOrchestrator(
         const visionAnalyses = await analyzeImages(rawInput.imagenes);
         visionSummary = buildVisionSummary(visionAnalyses);
       } catch (err) {
-        console.warn('[Orchestrator] Vision falló, continuando sin análisis de imágenes:', err);
+        log.warn('Vision falló, continuando sin análisis de imágenes', err instanceof Error ? { error: err.message } : undefined);
       }
     }
 
@@ -101,7 +104,7 @@ export async function generateBudgetOrchestrator(
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Error desconocido en el pipeline';
-    console.error('[Orchestrator] Error:', error);
+    log.error('Error en pipeline', error instanceof Error ? error : undefined);
 
     return {
       success: false,

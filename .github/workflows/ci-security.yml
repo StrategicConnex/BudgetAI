@@ -1,0 +1,78 @@
+# ===== CI/CD: Security Pipeline =====
+# Ejecuta type-check, lint y tests de seguridad en cada PR a main/develop.
+
+name: CI - Security
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security:
+    name: Security & Type Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      NODE_ENV: test
+      SENTRY_DSN: ''
+      NEXT_PUBLIC_SUPABASE_URL: 'https://test-project.supabase.co'
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key'
+      SUPABASE_SERVICE_ROLE_KEY: 'test-service-role-key'
+      GEMINI_API_KEY: 'test-gemini-key'
+      OPENROUTER_API_KEY: 'test-openrouter-key'
+      XIAOMI_API_KEY: 'test-xiaomi-key'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type check
+        run: npm run type-check
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Security tests
+        run: npm run test:security
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-test-report
+          path: tests/reports/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Write CI summary
+        if: always()
+        run: |
+          echo '## CI Security Results' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| TypeScript | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Tests | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY

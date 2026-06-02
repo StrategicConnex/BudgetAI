@@ -1,11 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withRateLimit } from '@/lib/api-middleware';
+import { createLogger } from '@/lib/logger';
 
-export async function POST(req: NextRequest) {
+const log = createLogger('API/ocr-pdf');
+
+export const POST = withRateLimit(async (req: NextRequest) => {
   try {
     const { base64, filename } = await req.json() as { base64: string; filename: string };
 
     if (!base64) {
       return NextResponse.json({ error: 'Se requiere base64 del PDF' }, { status: 400 });
+    }
+
+    // V-06: Validar tamaño del payload server-side
+    if (base64.length > 14 * 1024 * 1024) {
+      return NextResponse.json(
+        { error: 'PDF demasiado grande. El tamaño máximo es 10MB.' },
+        { status: 400 }
+      );
     }
 
     const buffer = Buffer.from(base64, 'base64');
@@ -33,10 +45,10 @@ export async function POST(req: NextRequest) {
       charCount: text.length,
     });
   } catch (err) {
-    console.error('[PDF OCR]', err);
+    log.error('No se pudo extraer texto del PDF', err instanceof Error ? err : undefined);
     return NextResponse.json(
       { error: 'No se pudo extraer texto del PDF', details: String(err) },
       { status: 500 }
     );
   }
-}
+}, { limit: 'ocr' });

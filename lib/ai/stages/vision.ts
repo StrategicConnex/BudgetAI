@@ -1,6 +1,9 @@
 import { callAI, withRetry, extractJSON, AI_MODELS } from '../providers';
 import { VISION_SYSTEM_PROMPT } from '../prompts/system';
+import { createLogger } from '@/lib/logger';
 import type { ImageInput, VisionAnalysis } from '@/types/budget';
+
+const log = createLogger('VisionStage');
 
 // Mock para cuando no hay API key
 const VISION_MOCK: VisionAnalysis = {
@@ -14,7 +17,7 @@ const VISION_MOCK: VisionAnalysis = {
 
 export async function analyzeImage(image: ImageInput): Promise<VisionAnalysis> {
   if (!process.env.OPENROUTER_API_KEY) {
-    console.warn('[VisionStage] Usando mock — no hay OPENROUTER_API_KEY configurada');
+    log.warn('Usando mock — no hay OPENROUTER_API_KEY configurada');
     return VISION_MOCK;
   }
 

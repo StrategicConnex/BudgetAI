@@ -1,5 +1,6 @@
 import type { BudgetData, BudgetItem } from '@/types/budget';
 import { formatCurrency } from '@/lib/ai/stages/validator';
+import { escapeHtml } from '@/lib/html-sanitize';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -33,18 +34,18 @@ export function renderBudgetHTML(budget: BudgetData): string {
   for (const [category, categoryItems] of grouped) {
     itemsHTML += `
       <tr class="category-row">
-        <td colspan="5">${category}</td>
+        <td colspan="5">${escapeHtml(category)}</td>
       </tr>
     `;
     for (const item of categoryItems) {
       itemsHTML += `
         <tr class="page-break-inside-avoid">
           <td>
-            <div class="item-titulo">${item.titulo}</div>
-            <div class="item-descripcion">${item.descripcion}</div>
-            ${item.observaciones ? `<div class="item-observacion">* ${item.observaciones}</div>` : ''}
+            <div class="item-titulo">${escapeHtml(item.titulo)}</div>
+            <div class="item-descripcion">${escapeHtml(item.descripcion)}</div>
+            ${item.observaciones ? `<div class="item-observacion">* ${escapeHtml(item.observaciones)}</div>` : ''}
           </td>
-          <td>${item.unidad}</td>
+          <td>${escapeHtml(item.unidad)}</td>
           <td class="currency">${item.cantidad}</td>
           <td class="currency">${fmt(item.precioUnitario)}</td>
           <td class="currency">${fmt(item.precioTotal)}</td>
@@ -56,22 +57,22 @@ export function renderBudgetHTML(budget: BudgetData): string {
   const condicionesHTML = `
     <div class="condition-item">
       <span class="condition-label">Validez del presupuesto</span>
-      <span class="condition-value">${condiciones.validezDias} días</span>
+      <span class="condition-value">${escapeHtml(String(condiciones.validezDias))} días</span>
     </div>
     <div class="condition-item">
       <span class="condition-label">Forma de pago</span>
-      <span class="condition-value">${condiciones.formaPago}</span>
+      <span class="condition-value">${escapeHtml(condiciones.formaPago)}</span>
     </div>
     ${condiciones.plazoDias > 0 ? `
     <div class="condition-item">
       <span class="condition-label">Plazo de ejecución</span>
-      <span class="condition-value">${condiciones.plazoDias} días hábiles</span>
+      <span class="condition-value">${escapeHtml(String(condiciones.plazoDias))} días hábiles</span>
     </div>
     ` : ''}
     ${condiciones.notas ? `
     <div class="condition-item">
       <span class="condition-label">Notas</span>
-      <span class="condition-value">${condiciones.notas}</span>
+      <span class="condition-value">${escapeHtml(condiciones.notas)}</span>
     </div>
     ` : ''}
   `;
@@ -89,7 +90,7 @@ export function renderBudgetHTML(budget: BudgetData): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${budget.titulo} — ${numero}</title>
+  <title>${escapeHtml(budget.titulo)} — ${escapeHtml(numero || '')}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>${css}</style>
@@ -100,14 +101,14 @@ export function renderBudgetHTML(budget: BudgetData): string {
     <!-- HEADER -->
     <header class="budget-header">
       <div>
-        <div class="budget-logo">${empresa?.nombre || 'BudgetAI'}</div>
-        ${empresa?.email ? `<div class="party-detail">${empresa.email}</div>` : ''}
-        ${empresa?.telefono ? `<div class="party-detail">${empresa.telefono}</div>` : ''}
+        <div class="budget-logo">${escapeHtml(empresa?.nombre || 'BudgetAI')}</div>
+        ${empresa?.email ? `<div class="party-detail">${escapeHtml(empresa.email)}</div>` : ''}
+        ${empresa?.telefono ? `<div class="party-detail">${escapeHtml(empresa.telefono)}</div>` : ''}
       </div>
       <div class="budget-meta">
-        <div class="budget-number">${numero || 'PRES-001'}</div>
-        <div class="budget-date">Fecha: ${formatDate(budget.createdAt)}</div>
-        <div class="budget-date">Categoría: ${budget.categoria}</div>
+        <div class="budget-number">${escapeHtml(numero || 'PRES-001')}</div>
+        <div class="budget-date">Fecha: ${escapeHtml(formatDate(budget.createdAt))}</div>
+        <div class="budget-date">Categoría: ${escapeHtml(budget.categoria)}</div>
       </div>
     </header>
 
@@ -115,30 +116,30 @@ export function renderBudgetHTML(budget: BudgetData): string {
     <div class="budget-parties">
       <div class="party-block">
         <div class="party-label">Presupuesto para</div>
-        <div class="party-name">${cliente.nombre}</div>
+        <div class="party-name">${escapeHtml(cliente.nombre)}</div>
         <div class="party-detail">
-          ${cliente.empresa ? `${cliente.empresa}<br>` : ''}
-          ${cliente.email ? `${cliente.email}<br>` : ''}
-          ${cliente.telefono ? `Tel: ${cliente.telefono}<br>` : ''}
-          ${cliente.direccion ? cliente.direccion : ''}
-          ${cliente.cuit ? `<br>CUIT: ${cliente.cuit}` : ''}
+          ${cliente.empresa ? `${escapeHtml(cliente.empresa)}<br>` : ''}
+          ${cliente.email ? `${escapeHtml(cliente.email)}<br>` : ''}
+          ${cliente.telefono ? `Tel: ${escapeHtml(cliente.telefono)}<br>` : ''}
+          ${cliente.direccion ? escapeHtml(cliente.direccion) : ''}
+          ${cliente.cuit ? `<br>CUIT: ${escapeHtml(cliente.cuit)}` : ''}
         </div>
       </div>
       <div class="party-block">
         <div class="party-label">Proveedor</div>
-        <div class="party-name">${empresa?.nombre || 'BudgetAI'}</div>
+        <div class="party-name">${escapeHtml(empresa?.nombre || 'BudgetAI')}</div>
         <div class="party-detail">
-          ${empresa?.email ? `${empresa.email}<br>` : ''}
-          ${empresa?.telefono ? `Tel: ${empresa.telefono}<br>` : ''}
-          ${empresa?.direccion ? empresa.direccion : ''}
-          ${empresa?.cuit ? `<br>CUIT: ${empresa.cuit}` : ''}
+          ${empresa?.email ? `${escapeHtml(empresa.email)}<br>` : ''}
+          ${empresa?.telefono ? `Tel: ${escapeHtml(empresa.telefono)}<br>` : ''}
+          ${empresa?.direccion ? escapeHtml(empresa.direccion) : ''}
+          ${empresa?.cuit ? `<br>CUIT: ${escapeHtml(empresa.cuit)}` : ''}
         </div>
       </div>
     </div>
 
     <!-- DESCRIPTION -->
     <div class="budget-description">
-      <p>${budget.descripcionGeneral}</p>
+      <p>${escapeHtml(budget.descripcionGeneral)}</p>
     </div>
 
     <!-- ITEMS TABLE -->
@@ -188,15 +189,15 @@ export function renderBudgetHTML(budget: BudgetData): string {
     ${budget.observaciones ? `
     <div class="observations-section">
       <div class="section-title">Observaciones</div>
-      <p class="observations-text">${budget.observaciones}</p>
+      <p class="observations-text">${escapeHtml(budget.observaciones)}</p>
     </div>
     ` : ''}
 
     <!-- FOOTER -->
     <footer class="budget-footer">
       <div>
-        <div>${empresa?.nombre || 'BudgetAI'}</div>
-        ${empresa?.cuit ? `<div>CUIT: ${empresa.cuit}</div>` : ''}
+        <div>${escapeHtml(empresa?.nombre || 'BudgetAI')}</div>
+        ${empresa?.cuit ? `<div>CUIT: ${escapeHtml(empresa.cuit)}</div>` : ''}
       </div>
       <div class="footer-signature">
         <div class="signature-line"></div>

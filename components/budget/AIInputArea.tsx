@@ -1,12 +1,21 @@
 'use client';
 
-import { useCallback, useState } from 'react';
-import { useDropzone } from 'react-dropzone';
+import { useState } from 'react';
 import { useBudgetStore } from '@/store/budget.store';
+import { useGenerate } from '@/hooks/useGenerate';
+import { useFileUpload } from '@/hooks/useFileUpload';
+import { Button } from '@/components/ui/Button';
+import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Input, Textarea } from '@/components/ui/Input';
+import { Badge } from '@/components/ui/Badge';
+import { ProgressBar, StepIndicator } from '@/components/ui/ProgressBar';
 import {
-  Sparkles, Upload, X, ImageIcon, AlertCircle, Brain,
-  Zap, Eye, CheckCircle2, FileText, FileImage,
+  Sparkles, Upload, X, ImageIcon, AlertCircle,
+  Zap, FileText, FileImage, Brain, Eye, CheckCircle2,
 } from 'lucide-react';
+import TextTemplateSelector from '@/components/budget/TextTemplateSelector';
+import CompanySettings from '@/components/budget/CompanySettings';
+import { trackAICall } from '@/components/dashboard/AICostMonitor';
 import type { PipelineStage } from '@/lib/ai/orchestrator';
 
 const MAX_FILES = 20;
@@ -19,6 +28,8 @@ const STAGE_INFO: Record<PipelineStage, { label: string; icon: typeof Brain; col
   complete:   { label: '¡Listo!',                       icon: CheckCircle2,  color: 'text-emerald-400'},
 };
 
+const PIPELINE_STAGES: PipelineStage[] = ['vision', 'parsing', 'generation', 'validation', 'complete'];
+
 export default function AIInputArea() {
   const {
     rawText, setRawText,
@@ -28,168 +39,65 @@ export default function AIInputArea() {
     clienteNombre, setClienteNombre,
     clienteEmpresa, setClienteEmpresa,
     tasaImpuesto,
-    isGenerating, setIsGenerating,
-    pipelineProgress, setPipelineProgress,
-    error, setError,
-    setBudget, setCurrentStep,
+    isGenerating: storeIsGenerating,
+    pipelineProgress,
+    error: storeError, setError: setStoreError,
   } = useBudgetStore();
 
   const [charCount, setCharCount] = useState(0);
-  const [processingFiles, setProcessingFiles] = useState<Set<string>>(new Set());
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  // ───────────────────────────────────────────────
-  // Extraer texto de PDF via API server-side
-  // ───────────────────────────────────────────────
-  async function extractPDFText(base64: string, filename: string): Promise<string> {
-    try {
-      const res = await fetch('/api/ocr/pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ base64, filename }),
-      });
-      const data = await res.json();
-      return data.success ? data.text : '';
-    } catch {
-      return '';
-    }
-  }
+  const { generate, cancelGeneration } = useGenerate();
 
-  // ───────────────────────────────────────────────
-  // Dropzone — imágenes + PDFs, hasta 20 archivos
-  // ───────────────────────────────────────────────
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    const remaining = MAX_FILES - images.length;
-    const toProcess = acceptedFiles.slice(0, remaining);
-
-    for (const file of toProcess) {
-      const key = `${file.name}-${file.size}`;
-      setProcessingFiles(prev => new Set(prev).add(key));
-
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const dataUrl = e.target?.result as string;
-        const base64 = dataUrl.split(',')[1];
-        const isPDF = file.type === 'application/pdf';
-
-        let pdfText: string | undefined;
-        if (isPDF) {
-          pdfText = await extractPDFText(base64, file.name);
-        }
-
-        addImage({
-          base64,
-          mimeType: file.type,
-          filename: file.name,
-          isPDF,
-          pdfText,
-        });
-
-        setProcessingFiles(prev => {
-          const next = new Set(prev);
-          next.delete(key);
-          return next;
-        });
-      };
-      reader.readAsDataURL(file);
-    }
-  }, [addImage, images.length]);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'image/*':           ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp'],
-      'application/pdf':   ['.pdf'],
-    },
+  const {
+    getRootProps, getInputProps, isDragActive,
+    isProcessing, imageCount, pdfCount, totalCount,
+  } = useFileUpload({
     maxFiles: MAX_FILES,
-    disabled: images.length >= MAX_FILES || isGenerating,
+    existingImages: images,
+    onAddImage: addImage,
+    onRemoveImage: removeImage,
+    onError: setLocalError,
+    disabled: storeIsGenerating,
   });
 
+  const error = localError || storeError;
+  const showPipeline = storeIsGenerating && pipelineProgress;
+
   // ───────────────────────────────────────────────
-  // Generate
+  // Handle generate
   // ───────────────────────────────────────────────
   async function handleGenerate() {
     if (!rawText.trim() || rawText.length < 10) {
-      setError('Describí el trabajo con al menos 10 caracteres');
+      setLocalError('Describí el trabajo con al menos 10 caracteres');
       return;
     }
 
-    setError(null);
-    setIsGenerating(true);
-    setCurrentStep('generating');
-    setPipelineProgress({ stage: 'vision', message: 'Iniciando pipeline...', progress: 5 });
+    setLocalError(null);
+    setStoreError(null);
 
-    // Agregar texto extraído de PDFs al rawText enviado
-    const pdfTexts = images
-      .filter(img => img.isPDF && img.pdfText)
-      .map(img => `[PDF: ${img.filename}]\n${img.pdfText}`)
-      .join('\n\n');
-
-    const textoCompleto = pdfTexts
-      ? `${rawText}\n\n--- Contenido de PDFs adjuntos ---\n${pdfTexts}`
-      : rawText;
-
-    try {
-      const response = await fetch('/api/budgets/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          texto: textoCompleto,
-          imagenes: images.filter(img => !img.isPDF), // solo imágenes para vision
-          templateId,
-          currency,
-          tasaImpuesto,
-          clienteNombre: clienteNombre || undefined,
-          clienteEmpresa: clienteEmpresa || undefined,
-        }),
-      });
-
-      const progressSteps: Array<{ stage: PipelineStage; message: string; progress: number }> = [
-        { stage: 'vision',      message: images.some(i => !i.isPDF) ? 'Analizando imágenes con Gemini Vision...' : 'Procesando documentos...', progress: 15 },
-        { stage: 'parsing',     message: 'Extrayendo información del texto...', progress: 35 },
-        { stage: 'generation',  message: 'Generando presupuesto profesional...', progress: 65 },
-        { stage: 'validation',  message: 'Validando y calculando totales...', progress: 85 },
-      ];
-
-      let stepIdx = 0;
-      const interval = setInterval(() => {
-        if (stepIdx < progressSteps.length) {
-          setPipelineProgress(progressSteps[stepIdx]);
-          stepIdx++;
-        }
-      }, 2500);
-
-      const data = await response.json();
-      clearInterval(interval);
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Error generando el presupuesto');
-      }
-
-      setPipelineProgress({ stage: 'complete', message: '¡Presupuesto generado!', progress: 100 });
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      setBudget(data.budget, data.id);
-      setCurrentStep('preview');
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error desconocido';
-      setError(msg);
-      setCurrentStep('input');
-    } finally {
-      setIsGenerating(false);
-      setPipelineProgress(null);
-    }
+    await generate({
+      rawText,
+      images,
+      templateId,
+      currency,
+      tasaImpuesto,
+      clienteNombre,
+      clienteEmpresa,
+    });
   }
 
   // ───────────────────────────────────────────────
   // Loading state
   // ───────────────────────────────────────────────
-  if (isGenerating && pipelineProgress) {
+  if (showPipeline) {
     const info = STAGE_INFO[pipelineProgress.stage];
     const Icon = info.icon;
 
     return (
-      <div className="glass-card p-12 text-center animate-fade-in">
+      <Card padding="xl" className="text-center animate-fade-in">
         <div className="flex flex-col items-center gap-6">
+          {/* Animated icon */}
           <div className="relative">
             <div
               className="w-20 h-20 rounded-2xl flex items-center justify-center"
@@ -197,8 +105,10 @@ export default function AIInputArea() {
             >
               <Icon className={`w-10 h-10 ${info.color} animate-pulse`} />
             </div>
-            <div className="absolute -inset-2 rounded-3xl opacity-30 blur-xl animate-pulse-slow"
-              style={{ background: 'linear-gradient(135deg, hsl(239 84% 67%), hsl(262 80% 65%))' }} />
+            <div
+              className="absolute -inset-2 rounded-3xl opacity-30 blur-xl animate-pulse-slow"
+              style={{ background: 'linear-gradient(135deg, hsl(239 84% 67%), hsl(262 80% 65%))' }}
+            />
           </div>
 
           <div>
@@ -206,118 +116,79 @@ export default function AIInputArea() {
             <p className="text-muted-foreground text-sm">{pipelineProgress.message}</p>
           </div>
 
-          <div className="w-full max-w-sm">
-            <div className="flex justify-between text-xs text-muted-foreground mb-2">
-              <span>Pipeline AI</span>
-              <span>{pipelineProgress.progress}%</span>
-            </div>
-            <div className="h-2 bg-secondary rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{
-                  width: `${pipelineProgress.progress}%`,
-                  background: 'linear-gradient(90deg, hsl(239 84% 67%), hsl(262 80% 65%))',
-                }}
-              />
-            </div>
-          </div>
+          <ProgressBar
+            value={pipelineProgress.progress}
+            label="Pipeline AI"
+            showLabel
+            className="max-w-sm"
+          />
 
-          <div className="flex items-center gap-3 text-xs">
-            {(['vision', 'parsing', 'generation', 'validation'] as PipelineStage[]).map((stage, idx) => {
-              const stages: PipelineStage[] = ['vision', 'parsing', 'generation', 'validation', 'complete'];
-              const currentIdx = stages.indexOf(pipelineProgress.stage);
-              const stageIdx = stages.indexOf(stage);
-              const isDone = stageIdx < currentIdx;
-              const isActive = stage === pipelineProgress.stage;
+          <StepIndicator
+            steps={PIPELINE_STAGES.map(s => ({ key: s, label: s }))}
+            currentStep={pipelineProgress.stage}
+          />
 
-              return (
-                <div key={stage} className="flex items-center gap-2">
-                  <div className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                    isDone ? 'bg-emerald-400' : isActive ? 'bg-primary animate-pulse' : 'bg-muted-foreground/30'
-                  }`} />
-                  {idx < 3 && <div className={`w-8 h-px ${isDone ? 'bg-emerald-400/50' : 'bg-border'}`} />}
-                </div>
-              );
-            })}
-          </div>
+          <Button variant="ghost" size="sm" onClick={cancelGeneration}>
+            Cancelar
+          </Button>
         </div>
-      </div>
+      </Card>
     );
   }
 
   // ───────────────────────────────────────────────
-  // Counts
+  // Input form
   // ───────────────────────────────────────────────
-  const imageCount = images.filter(i => !i.isPDF).length;
-  const pdfCount = images.filter(i => i.isPDF).length;
-  const totalCount = images.length;
-  const isProcessing = processingFiles.size > 0;
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 animate-slide-up">
       {/* Left: Main input */}
       <div className="lg:col-span-3 space-y-5">
         {/* Client info */}
-        <div className="glass-card p-6">
-          <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+        <Card padding="lg">
+          <CardHeader>
             <div className="w-5 h-5 rounded bg-primary/20 flex items-center justify-center">
               <span className="text-[10px] text-primary font-bold">1</span>
             </div>
-            Información del cliente
-          </h2>
+            <CardTitle>Información del cliente</CardTitle>
+          </CardHeader>
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Nombre del cliente</label>
-              <input
-                type="text"
-                value={clienteNombre}
-                onChange={e => setClienteNombre(e.target.value)}
-                placeholder="Ej: Juan Pérez"
-                disabled={isGenerating}
-                className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Empresa (opcional)</label>
-              <input
-                type="text"
-                value={clienteEmpresa}
-                onChange={e => setClienteEmpresa(e.target.value)}
-                placeholder="Ej: Constructora SA"
-                disabled={isGenerating}
-                className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-              />
-            </div>
+            <Input
+              label="Nombre del cliente"
+              value={clienteNombre}
+              onChange={e => setClienteNombre(e.target.value)}
+              placeholder="Ej: Juan Pérez"
+              disabled={storeIsGenerating}
+            />
+            <Input
+              label="Empresa (opcional)"
+              value={clienteEmpresa}
+              onChange={e => setClienteEmpresa(e.target.value)}
+              placeholder="Ej: Constructora SA"
+              disabled={storeIsGenerating}
+            />
           </div>
-        </div>
+        </Card>
 
         {/* Description */}
-        <div className="glass-card p-6">
-          <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+        <Card padding="lg">
+          <CardHeader>
             <div className="w-5 h-5 rounded bg-primary/20 flex items-center justify-center">
               <span className="text-[10px] text-primary font-bold">2</span>
             </div>
-            Descripción del trabajo
+            <CardTitle>Descripción del trabajo</CardTitle>
             <span className="ml-auto text-xs text-muted-foreground">{charCount} caracteres</span>
-          </h2>
-          <textarea
+          </CardHeader>
+          <Textarea
             value={rawText}
             onChange={e => {
               setRawText(e.target.value);
               setCharCount(e.target.value.length);
-              if (error) setError(null);
+              if (error) setLocalError(null);
             }}
-            placeholder={`Describí el trabajo a presupuestar con todos los detalles...
-
-Ejemplo:
-- Reparación de humedad en pared norte del living (aprox 8m²)
-- Grietas superficiales en el cielorraso del baño
-- Pintura general de 2 habitaciones
-
-También podés subir fotos y PDFs con planos o especificaciones técnicas.`}
+            placeholder={`Describí el trabajo a presupuestar con todos los detalles...\n\nEjemplo:\n- Reparación de humedad en pared norte del living (aprox 8m²)\n- Grietas superficiales en el cielorraso del baño\n- Pintura general de 2 habitaciones\n\nTambién podés subir fotos y PDFs con planos o especificaciones técnicas.`}
             rows={10}
-            disabled={isGenerating}
-            className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors resize-none leading-relaxed"
+            disabled={storeIsGenerating}
+            error={error || undefined}
           />
           {error && (
             <div className="mt-3 flex items-center gap-2 text-destructive text-xs">
@@ -325,21 +196,42 @@ También podés subir fotos y PDFs con planos o especificaciones técnicas.`}
               {error}
             </div>
           )}
-        </div>
+        </Card>
 
-        {/* Files (images + PDFs) */}
-        <div className="glass-card p-6">
-          <h2 className="text-sm font-semibold text-foreground mb-1 flex items-center gap-2">
+        {/* Text Templates */}
+        <TextTemplateSelector
+          onSelect={(desc) => {
+            const newText = rawText ? `${rawText}\n\n${desc}` : desc;
+            setRawText(newText);
+            setCharCount(newText.length);
+          }}
+          disabled={storeIsGenerating}
+        />
+
+        {/* Files */}
+        <Card padding="lg">
+          <CardHeader>
             <div className="w-5 h-5 rounded bg-primary/20 flex items-center justify-center">
               <span className="text-[10px] text-primary font-bold">3</span>
             </div>
-            Fotos y documentos
+            <CardTitle>Fotos y documentos</CardTitle>
             <span className="ml-auto text-xs text-muted-foreground">{totalCount}/{MAX_FILES} archivos</span>
-          </h2>
+          </CardHeader>
+
           {(imageCount > 0 || pdfCount > 0) && (
             <p className="text-xs text-muted-foreground mb-4">
-              {imageCount > 0 && <span className="mr-3"><FileImage className="w-3 h-3 inline mr-1" />{imageCount} imagen{imageCount !== 1 ? 'es' : ''}</span>}
-              {pdfCount > 0 && <span><FileText className="w-3 h-3 inline mr-1" />{pdfCount} PDF{pdfCount !== 1 ? 's' : ''}</span>}
+              {imageCount > 0 && (
+                <span className="mr-3">
+                  <FileImage className="w-3 h-3 inline mr-1" />
+                  {imageCount} imagen{imageCount !== 1 ? 'es' : ''}
+                </span>
+              )}
+              {pdfCount > 0 && (
+                <span>
+                  <FileText className="w-3 h-3 inline mr-1" />
+                  {pdfCount} PDF{pdfCount !== 1 ? 's' : ''}
+                </span>
+              )}
             </p>
           )}
 
@@ -379,10 +271,9 @@ También podés subir fotos y PDFs con planos o especificaciones técnicas.`}
               {images.map((img, idx) => (
                 <div key={idx} className="relative group">
                   {img.isPDF ? (
-                    /* PDF tile */
                     <div className="w-20 h-20 rounded-lg border border-border bg-secondary flex flex-col items-center justify-center gap-1 p-2">
                       <FileText className="w-7 h-7 text-red-400" />
-                      <span className="text-[9px] text-muted-foreground text-center leading-tight truncate w-full text-center">
+                      <span className="text-[9px] text-muted-foreground text-center leading-tight truncate w-full">
                         {img.filename.length > 12 ? img.filename.substring(0, 10) + '…' : img.filename}
                       </span>
                       {img.pdfText && (
@@ -390,7 +281,6 @@ También podés subir fotos y PDFs con planos o especificaciones técnicas.`}
                       )}
                     </div>
                   ) : (
-                    /* Image tile */
                     <div className="w-20 h-20 rounded-lg overflow-hidden border border-border bg-secondary">
                       <img
                         src={`data:${img.mimeType};base64,${img.base64}`}
@@ -399,15 +289,16 @@ También podés subir fotos y PDFs con planos o especificaciones técnicas.`}
                       />
                     </div>
                   )}
-
                   <button
-                    onClick={() => removeImage(idx)}
-                    disabled={isGenerating}
+                    onClick={() => {
+                      removeImage(idx);
+                      setLocalError(null);
+                    }}
+                    disabled={storeIsGenerating}
                     className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <X className="w-3 h-3" />
                   </button>
-
                   {!img.isPDF && (
                     <div className="absolute bottom-0 inset-x-0 rounded-b-lg flex items-center justify-center p-1 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
                       <ImageIcon className="w-3 h-3 text-white" />
@@ -417,14 +308,14 @@ También podés subir fotos y PDFs con planos o especificaciones técnicas.`}
               ))}
             </div>
           )}
-        </div>
+        </Card>
       </div>
 
       {/* Right: Settings + Generate */}
       <div className="lg:col-span-2 space-y-5">
         {/* Settings */}
-        <div className="glass-card p-6">
-          <h2 className="text-sm font-semibold text-foreground mb-4">Configuración</h2>
+        <Card padding="lg">
+          <CardTitle className="mb-4">Configuración</CardTitle>
 
           {/* Template */}
           <div className="mb-5">
@@ -471,7 +362,10 @@ También podés subir fotos y PDFs con planos o especificaciones técnicas.`}
               ))}
             </div>
           </div>
-        </div>
+        </Card>
+
+        {/* Company Settings */}
+        <CompanySettings disabled={storeIsGenerating} />
 
         {/* AI info */}
         <div
@@ -486,8 +380,8 @@ También podés subir fotos y PDFs con planos o especificaciones técnicas.`}
             Pipeline AI en 4 etapas
           </div>
           {[
-            { stage: 'Visión',     desc: 'Análisis de imágenes y PDFs' },
-            { stage: 'Parsing',    desc: 'Extracción de datos' },
+            { stage: 'Visión', desc: 'Análisis de imágenes y PDFs' },
+            { stage: 'Parsing', desc: 'Extracción de datos' },
             { stage: 'Generación', desc: 'Redacción profesional' },
             { stage: 'Validación', desc: 'Cálculo de totales' },
           ].map((s, i) => (
@@ -502,22 +396,17 @@ También podés subir fotos y PDFs con planos o especificaciones técnicas.`}
         </div>
 
         {/* Generate button */}
-        <button
+        <Button
           id="btn-generate-budget"
-          type="button"
+          variant="gradient"
+          size="lg"
           onClick={handleGenerate}
-          disabled={isGenerating || rawText.length < 10}
-          className="w-full py-4 rounded-xl text-white font-bold text-base transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 active:scale-[0.98]"
-          style={{
-            background: 'linear-gradient(135deg, hsl(239 84% 67%), hsl(262 80% 65%))',
-            boxShadow: '0 8px 32px hsl(239 84% 67% / 0.35)',
-          }}
+          disabled={storeIsGenerating || rawText.length < 10}
+          icon={<Sparkles className="w-5 h-5" />}
+          className="w-full"
         >
-          <span className="flex items-center justify-center gap-2">
-            <Sparkles className="w-5 h-5" />
-            Generar presupuesto con IA
-          </span>
-        </button>
+          Generar presupuesto con IA
+        </Button>
 
         {rawText.length > 0 && rawText.length < 10 && (
           <p className="text-xs text-muted-foreground text-center">

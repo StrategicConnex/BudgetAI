@@ -1,7 +1,10 @@
 import { callAI, withRetry, extractJSON, AI_MODELS } from '../providers';
 import { SYSTEM_PROMPT } from '../prompts/system';
 import { AIBudgetOutputSchema } from '@/lib/validators/budget';
+import { createLogger } from '@/lib/logger';
 import type { ParsedInput, RawInput } from '@/types/budget';
+
+const log = createLogger('GeneratorStage');
 
 interface GeneratorInput {
   parsedInput: ParsedInput;
@@ -15,7 +18,7 @@ export async function generateBudget(input: GeneratorInput) {
   const prompt = buildGeneratorPrompt(parsedInput, rawInput, visionSummary);
 
   if (!process.env.OPENROUTER_API_KEY) {
-    console.warn('[GeneratorStage] Usando mock — no hay API key de OpenRouter');
+    log.warn('Usando mock — no hay API key de OpenRouter');
     return getMockBudget(parsedInput, rawInput);
   }
 

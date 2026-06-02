@@ -1,11 +1,31 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('SupabaseServer');
+
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(`[Supabase] Variable de entorno faltante: ${name}. Configurala en las Environment Variables de Vercel.`);
+    }
+    log.warn(`Variable de entorno faltante: ${name}. Usando placeholder para desarrollo.`);
+    return `placeholder-${name.toLowerCase()}`;
+  }
+  return value;
+}
 
 export async function createClient() {
+  if (process.env.PLAYWRIGHT_TEST === 'true') {
+    const { createMockSupabaseClient } = await import('./mock');
+    return createMockSupabaseClient() as any;
+  }
+
   const cookieStore = await cookies();
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-project.supabase.co';
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+  const supabaseUrl = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
+  const supabaseAnonKey = requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
 
   return createServerClient(
     supabaseUrl,
@@ -30,10 +50,19 @@ export async function createClient() {
 }
 
 export async function createServiceClient() {
+  if (process.env.PLAYWRIGHT_TEST === 'true') {
+    const { createMockSupabaseClient } = await import('./mock');
+    return createMockSupabaseClient() as any;
+  }
+
   const cookieStore = await cookies();
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-project.supabase.co';
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-role-key';
+  const supabaseUrl = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!serviceRoleKey) {
+    throw new Error('[Supabase] SUPABASE_SERVICE_ROLE_KEY no configurada. El service client requiere esta variable.');
+  }
 
   return createServerClient(
     supabaseUrl,

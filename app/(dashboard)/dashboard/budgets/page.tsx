@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { FileText, Plus, Sparkles } from 'lucide-react';
+import DuplicateBudgetButton from '@/components/budget/DuplicateBudgetButton';
+import type { BudgetData } from '@/types/budget';
 
 export default async function BudgetsPage() {
-  let budgets: any[] = [];
+  let budgets: { id: string; title: string; status: string; created_at: string; ai_output: BudgetData | null }[] = [];
 
   try {
     const supabase = await createClient();
@@ -62,7 +64,7 @@ export default async function BudgetsPage() {
             const currency = aiOutput?.totales?.currency || 'ARS';
 
             return (
-              <div key={budget.id} className="glass-card p-5 hover:border-primary/20 transition-all duration-150">
+              <div key={budget.id} className="group relative glass-card p-5 hover:border-primary/20 transition-all duration-150">
                 <div className="flex items-center gap-5">
                   <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
                     <FileText className="w-6 h-6 text-primary" />
@@ -96,6 +98,11 @@ export default async function BudgetsPage() {
                         }).format(total)}
                       </div>
                       <div className="text-xs text-muted-foreground">{currency}</div>
+                    </div>
+                  )}
+                  {aiOutput && (
+                    <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <DuplicateBudgetButton budget={aiOutput} />
                     </div>
                   )}
                 </div>

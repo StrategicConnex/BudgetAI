@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { listBudgets } from '@/lib/supabase/queries/budgets';
 import Link from 'next/link';
-import { FileText, Sparkles, TrendingUp, Download } from 'lucide-react';
+import { FileText, Sparkles, Download, TrendingUp } from 'lucide-react';
 import AIStatusCards from '@/components/dashboard/AIStatusCards';
 
 export default async function DashboardPage() {
@@ -68,10 +68,18 @@ export default async function DashboardPage() {
           border: '1px solid hsl(239 84% 67% / 0.25)',
         }}
       >
-        <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10 blur-3xl -translate-y-1/2 translate-x-1/2"
-          style={{ background: 'hsl(239 84% 67%)' }} />
+        <div
+          className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10 blur-3xl -translate-y-1/2 translate-x-1/2"
+          style={{ background: 'hsl(239 84% 67%)' }}
+        />
         <div className="relative">
-          <div className="badge-premium mb-3 w-fit">
+          <div className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium mb-3"
+            style={{
+              background: 'linear-gradient(135deg, hsl(239 84% 67% / 0.2), hsl(262 80% 65% / 0.2))',
+              border: '1px solid hsl(239 84% 67% / 0.3)',
+              color: 'hsl(239 84% 67%)',
+            }}
+          >
             <Sparkles className="w-3 h-3" />
             Gemini AI
           </div>
@@ -106,8 +114,11 @@ export default async function DashboardPage() {
             </Link>
           </div>
           <div className="space-y-2">
-            {recentBudgets.map((budget) => (
-              <div key={budget.id} className="glass-card p-4 flex items-center gap-4 hover:border-primary/20 transition-colors">
+            {recentBudgets.map((budget: any) => (
+              <div
+                key={budget.id}
+                className="rounded-xl border border-white/5 bg-card/80 backdrop-blur-sm p-4 flex items-center gap-4 hover:border-primary/20 transition-colors"
+              >
                 <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
                   <FileText className="w-5 h-5 text-primary" />
                 </div>
@@ -131,7 +142,7 @@ export default async function DashboardPage() {
       )}
 
       {recentBudgets.length === 0 && (
-        <div className="glass-card p-12 text-center">
+        <div className="rounded-xl border border-white/5 bg-card/80 backdrop-blur-sm p-12 text-center">
           <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
           <h3 className="text-lg font-semibold text-foreground mb-2">Sin presupuestos aún</h3>
           <p className="text-muted-foreground text-sm mb-6">
@@ -152,10 +163,7 @@ export default async function DashboardPage() {
 }
 
 function StatCard({
-  icon,
-  label,
-  value,
-  color,
+  icon, label, value, color,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -171,7 +179,7 @@ function StatCard({
   const c = colors[color];
 
   return (
-    <div className="glass-card p-5">
+    <div className="rounded-xl border border-white/5 bg-card/80 backdrop-blur-sm p-5">
       <div
         className="w-10 h-10 rounded-lg flex items-center justify-center mb-4"
         style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.text }}

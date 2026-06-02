@@ -1,23 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api-middleware';
 import { analyzeImage } from '@/lib/ai/stages/vision';
-import { createClient } from '@/lib/supabase/server';
+import { createLogger } from '@/lib/logger';
 import type { ImageInput } from '@/types/budget';
+
+const log = createLogger('API/ocr');
 
 export const maxDuration = 30;
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest) => {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
-    }
-
     const body = await request.json();
     const image = body.image as ImageInput;
 
     if (!image?.base64 || !image?.mimeType) {
       return NextResponse.json({ error: 'Imagen inválida' }, { status: 400 });
+    }
+
+    // V-06: Validar tamaño del payload server-side
+    if (image.base64.length > 14 * 1024 * 1024) {
+      return NextResponse.json(
+        { error: 'Imagen demasiado grande. El tamaño máximo es 10MB.' },
+        { status: 400 }
+      );
     }
 
     // Validar que sea una imagen soportada
@@ -33,10 +38,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, analysis });
   } catch (error) {
-    console.error('[API/ocr]', error);
+    log.error('Error analizando imagen', error instanceof Error ? error : undefined);
     return NextResponse.json(
       { error: 'Error analizando imagen' },
       { status: 500 }
     );
   }
-}
+}, { rateLimit: 'ocr' });

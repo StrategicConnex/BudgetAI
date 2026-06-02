@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { LogIn, UserPlus } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -75,38 +78,25 @@ export default function LoginPage() {
         {/* Card */}
         <div className="glass-card p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="tu@email.com"
-                className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-foreground mb-2">
-                Contraseña
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-                minLength={6}
-                className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
-              />
-            </div>
+            <Input
+              label="Email"
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              placeholder="tu@email.com"
+            />
+            <Input
+              label="Contraseña"
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              placeholder="••••••••"
+              minLength={6}
+            />
 
             {/* Error */}
             {error && (
@@ -116,24 +106,16 @@ export default function LoginPage() {
             )}
 
             {/* Submit */}
-            <button
+            <Button
               type="submit"
-              disabled={loading}
-              className="w-full py-3 rounded-lg font-semibold text-white transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
-              style={{
-                background: 'linear-gradient(135deg, hsl(239 84% 67%), hsl(262 80% 65%))',
-                boxShadow: loading ? 'none' : '0 4px 24px hsl(239 84% 67% / 0.35)',
-              }}
+              variant="gradient"
+              size="lg"
+              loading={loading}
+              icon={mode === 'login' ? <LogIn className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+              className="w-full"
             >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  {mode === 'login' ? 'Iniciando sesión...' : 'Creando cuenta...'}
-                </span>
-              ) : (
-                mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'
-              )}
-            </button>
+              {mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
+            </Button>
           </form>
 
           {/* Toggle mode */}

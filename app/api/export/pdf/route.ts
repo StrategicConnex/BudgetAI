@@ -1,18 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api-middleware';
 import { generatePDF } from '@/lib/pdf/generate';
-import { createClient } from '@/lib/supabase/server';
+import { createLogger } from '@/lib/logger';
 import type { BudgetData } from '@/types/budget';
+
+const log = createLogger('API/export-pdf');
 
 export const maxDuration = 60;
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest) => {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
-    }
-
     const body = await request.json();
     const budget = body.budget as BudgetData;
 
@@ -33,10 +30,10 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[API/export/pdf]', error);
+    log.error('Error generando PDF', error instanceof Error ? error : undefined);
     return NextResponse.json(
       { error: 'Error generando PDF' },
       { status: 500 }
     );
   }
-}
+}, { rateLimit: 'export' });

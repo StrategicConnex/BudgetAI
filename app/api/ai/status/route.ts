@@ -1,12 +1,16 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { withRateLimit } from '@/lib/api-middleware';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AI_MODELS } from '@/lib/ai/providers';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('API/status');
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 const XIAOMI_API_KEY = process.env.XIAOMI_API_KEY || '';
 const XIAOMI_BASE_URL_ANTHROPIC = process.env.XIAOMI_BASE_URL_ANTHROPIC || 'https://api.xiaomimimo.com/anthropic/v1';
 
-export async function GET() {
+export const GET = withRateLimit(async (_request: NextRequest) => {
   const providers: Record<string, any> = {
     gemini_direct: {
       name: 'Google Gemini Direct',
@@ -31,13 +35,12 @@ export async function GET() {
   if (GEMINI_API_KEY) {
     try {
       const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-      // Usar gemini-3.5-flash para validar conexión
       const modelInstance = genAI.getGenerativeModel({ model: AI_MODELS.main });
       const testResponse = await modelInstance.generateContent({
         contents: [{ role: 'user', parts: [{ text: 'ping' }] }],
         generationConfig: { maxOutputTokens: 2 }
       });
-      
+
       const responseText = testResponse.response.text();
       if (responseText) {
         providers.gemini_direct.status = 'online';
@@ -52,8 +55,8 @@ export async function GET() {
       }
     } catch (err: any) {
       const msg = err.message || '';
-      console.warn('[Status API] Gemini Direct falló:', msg);
-      
+      log.warn('Gemini Direct falló', { error: msg });
+
       if (msg.includes(' leaked ') || msg.includes('leak') || msg.includes('403 Forbidden')) {
         providers.gemini_direct.status = 'key_invalid_or_leaked';
         providers.gemini_direct.error = 'La clave API ha sido reportada como filtrada (leaked) por Google y ha sido revocada.';
@@ -96,13 +99,11 @@ export async function GET() {
       } else {
         const errorText = await res.text();
         let errorJson: any = {};
-        try {
-          errorJson = JSON.parse(errorText);
-        } catch {}
-        
+        try { errorJson = JSON.parse(errorText); } catch {}
+
         const code = errorJson?.error?.code || res.status;
         const msg = errorJson?.error?.message || errorText;
-        
+
         if (code === '402' || code === 402 || msg.includes('balance') || msg.includes('balance')) {
           providers.xiaomi_mimo.status = 'insufficient_balance';
           providers.xiaomi_mimo.error = 'Saldo de cuenta insuficiente en Xiaomi MiMo API (Insufficient balance).';
@@ -115,7 +116,7 @@ export async function GET() {
         }
       }
     } catch (err: any) {
-      console.warn('[Status API] Xiaomi Backup falló:', err.message);
+      log.warn('Xiaomi Backup falló', { error: err.message });
       providers.xiaomi_mimo.status = 'error';
       providers.xiaomi_mimo.error = err.message || 'Timeout o error de red.';
     }
@@ -129,4 +130,4 @@ export async function GET() {
     models,
     checkedAt: new Date().toISOString(),
   });
-}
+}, { limit: 'status', identifier: 'ip' });

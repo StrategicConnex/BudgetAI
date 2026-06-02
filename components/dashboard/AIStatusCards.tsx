@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Brain, Zap, CreditCard, BarChart3, Wifi, WifiOff, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Brain, CreditCard, BarChart3, Wifi, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Card, CardTitle } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 interface AIStatus {
   success: boolean;
@@ -65,7 +68,6 @@ export default function AIStatusCards() {
   const credits = data?.credits;
   const models  = data?.models ?? [];
 
-  // Determinar estado global de créditos
   const creditStatus: 'ok' | 'warning' | 'critical' | 'loading' = loading
     ? 'loading'
     : !credits
@@ -85,11 +87,11 @@ export default function AIStatusCards() {
 
   return (
     <div className="space-y-4">
-      {/* Título sección */}
+      {/* Section title */}
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
           <Brain className="w-4 h-4 text-primary" />
-          Estado IA · Gemini (vía OpenRouter)
+          Estado IA · Gemini (Directo + Xiaomi Backup)
         </h2>
         <button
           onClick={fetchStatus}
@@ -102,53 +104,44 @@ export default function AIStatusCards() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-        {/* ── CARD 1: Status de los modelos ── */}
-        <div
-          className="glass-card p-5 flex flex-col gap-4"
-          style={{ border: '1px solid hsl(239 84% 67% / 0.2)' }}
-        >
+        {/* ── Card 1: Model Status ── */}
+        <Card padding="md" className="flex flex-col gap-4" style={{ borderColor: 'hsl(239 84% 67% / 0.2)' }}>
           <div className="flex items-center gap-2">
-            <div
-              className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ background: 'hsl(239 84% 67% / 0.12)', border: '1px solid hsl(239 84% 67% / 0.25)' }}
-            >
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: 'hsl(239 84% 67% / 0.12)', border: '1px solid hsl(239 84% 67% / 0.25)' }}>
               <Wifi className="w-4 h-4" style={{ color: 'hsl(239 84% 67%)' }} />
             </div>
             <div>
-              <div className="text-xs font-semibold text-foreground">Estado de modelos</div>
+              <CardTitle>Estado de modelos</CardTitle>
               <div className="text-[11px] text-muted-foreground">Disponibilidad en tiempo real</div>
             </div>
           </div>
 
           <div className="space-y-2.5">
-            {loading
-              ? [1, 2].map(i => (
-                  <div key={i} className="flex items-center gap-2 animate-pulse">
-                    <StatusDot status="loading" />
-                    <div className="h-3 bg-secondary rounded w-24" />
-                    <div className="ml-auto h-3 bg-secondary rounded w-12" />
+            {loading ? (
+              <>
+                {[1, 2].map(i => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-pulse" />
+                    <Skeleton className="w-24 h-3" />
+                    <Skeleton className="w-12 h-3 ml-auto" />
                   </div>
-                ))
-              : models.map(m => (
-                  <div key={m.key} className="flex items-center gap-2">
-                    <StatusDot status={m.status} />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium text-foreground truncate">{m.label}</div>
-                      <div className="text-[10px] text-muted-foreground truncate">{m.id.split('/')[1]}</div>
-                    </div>
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                      m.status === 'online'
-                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                        : m.status === 'low_credits'
-                        ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
-                        : 'bg-red-500/10 border-red-500/20 text-red-400'
-                    }`}>
-                      {m.status === 'online' ? 'Online' : m.status === 'low_credits' ? 'Sin créditos' : 'Error'}
-                    </span>
+                ))}
+              </>
+            ) : (
+              models.map(m => (
+                <div key={m.key} className="flex items-center gap-2">
+                  <StatusDot status={m.status} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium text-foreground truncate">{m.label}</div>
+                    <div className="text-[10px] text-muted-foreground truncate">{m.id.split('/').pop()}</div>
                   </div>
-                ))
-            }
+                  <Badge variant={m.status === 'online' ? 'success' : m.status === 'low_credits' ? 'warning' : 'error'}>
+                    {m.status === 'online' ? 'Online' : m.status === 'low_credits' ? 'Sin créditos' : 'Error'}
+                  </Badge>
+                </div>
+              ))
+            )}
           </div>
 
           {!loading && data && (
@@ -156,30 +149,25 @@ export default function AIStatusCards() {
               Rate limit: {data.credits?.rateLimit?.requests ?? '—'} req/{data.credits?.rateLimit?.interval ?? '—'}
             </div>
           )}
-        </div>
+        </Card>
 
-        {/* ── CARD 2: Créditos restantes ── */}
-        <div
-          className="glass-card p-5 flex flex-col gap-4"
-          style={{ border: `1px solid ${creditColor.bar}33` }}
-        >
+        {/* ── Card 2: Credits ── */}
+        <Card padding="md" className="flex flex-col gap-4" style={{ borderColor: `${creditColor.bar}33` }}>
           <div className="flex items-center gap-2">
-            <div
-              className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ background: `${creditColor.bar}18`, border: `1px solid ${creditColor.bar}40` }}
-            >
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: `${creditColor.bar}18`, border: `1px solid ${creditColor.bar}40` }}>
               <CreditCard className="w-4 h-4" style={{ color: creditColor.bar }} />
             </div>
             <div>
-              <div className="text-xs font-semibold text-foreground">Créditos restantes</div>
-              <div className="text-[11px] text-muted-foreground">Saldo disponible en OpenRouter</div>
+              <CardTitle>Créditos restantes</CardTitle>
+              <div className="text-[11px] text-muted-foreground">Saldo disponible en Gemini</div>
             </div>
           </div>
 
           {loading ? (
-            <div className="space-y-2 animate-pulse">
-              <div className="h-8 bg-secondary rounded w-24" />
-              <div className="h-2 bg-secondary rounded-full" />
+            <div className="space-y-2">
+              <Skeleton className="w-24 h-8" />
+              <Skeleton className="w-full h-2" />
             </div>
           ) : (
             <div className="space-y-3">
@@ -196,16 +184,11 @@ export default function AIStatusCards() {
               {credits?.usagePct !== null && (
                 <div>
                   <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-700"
-                      style={{
-                        width: `${credits?.usagePct ?? 0}%`,
-                        background: creditColor.bar,
-                      }}
-                    />
+                    <div className="h-full rounded-full transition-all duration-700"
+                      style={{ width: `${credits?.usagePct ?? 0}%`, background: creditColor.bar }} />
                   </div>
                   <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-                    <span className={creditColor.text}>{creditStatus === 'loading' ? '...' : creditColor.label}</span>
+                    <span className={creditColor.text}>{creditColor.label}</span>
                     <span>{credits?.usagePct?.toFixed(1)}% usado</span>
                   </div>
                 </div>
@@ -214,36 +197,31 @@ export default function AIStatusCards() {
               {creditStatus === 'critical' && (
                 <div className="flex items-center gap-1.5 text-[11px] text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2.5 py-1.5">
                   <AlertTriangle className="w-3 h-3 flex-shrink-0" />
-                  Recargá créditos en openrouter.ai
+                  Recargá créditos en tu cuenta de Gemini
                 </div>
               )}
             </div>
           )}
-        </div>
+        </Card>
 
-        {/* ── CARD 3: Consumo y tokens ── */}
-        <div
-          className="glass-card p-5 flex flex-col gap-4"
-          style={{ border: '1px solid hsl(262 80% 65% / 0.2)' }}
-        >
+        {/* ── Card 3: Usage ── */}
+        <Card padding="md" className="flex flex-col gap-4" style={{ borderColor: 'hsl(262 80% 65% / 0.2)' }}>
           <div className="flex items-center gap-2">
-            <div
-              className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ background: 'hsl(262 80% 65% / 0.12)', border: '1px solid hsl(262 80% 65% / 0.25)' }}
-            >
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: 'hsl(262 80% 65% / 0.12)', border: '1px solid hsl(262 80% 65% / 0.25)' }}>
               <BarChart3 className="w-4 h-4" style={{ color: 'hsl(262 80% 65%)' }} />
             </div>
             <div>
-              <div className="text-xs font-semibold text-foreground">Consumo acumulado</div>
+              <CardTitle>Consumo acumulado</CardTitle>
               <div className="text-[11px] text-muted-foreground">Gasto total en esta API key</div>
             </div>
           </div>
 
           {loading ? (
-            <div className="space-y-2 animate-pulse">
-              <div className="h-8 bg-secondary rounded w-20" />
-              <div className="h-2 bg-secondary rounded-full" />
-              <div className="h-3 bg-secondary rounded w-32" />
+            <div className="space-y-2">
+              <Skeleton className="w-20 h-8" />
+              <Skeleton className="w-full h-2" />
+              <Skeleton className="w-32 h-3" />
             </div>
           ) : (
             <div className="space-y-3">
@@ -251,21 +229,17 @@ export default function AIStatusCards() {
                 <div className="text-2xl font-bold text-violet-400">
                   {formatUsd(credits?.usageUsd ?? null)}
                 </div>
-                <div className="text-[11px] text-muted-foreground mt-0.5">
-                  consumido en total
-                </div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">consumido en total</div>
               </div>
 
               {credits?.usagePct !== null && (
                 <div>
                   <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-700"
+                    <div className="h-full rounded-full transition-all duration-700"
                       style={{
                         width: `${credits?.usagePct ?? 0}%`,
                         background: 'linear-gradient(90deg, hsl(239 84% 67%), hsl(262 80% 65%))',
-                      }}
-                    />
+                      }} />
                   </div>
                   <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
                     <span className="text-violet-400">{credits?.usagePct?.toFixed(2)}% del límite</span>
@@ -288,7 +262,7 @@ export default function AIStatusCards() {
               </div>
             </div>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   );

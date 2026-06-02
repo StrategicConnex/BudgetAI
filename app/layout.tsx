@@ -2,6 +2,12 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 
+// V-01: Validar variables de entorno al iniciar la app (solo server-side)
+if (typeof globalThis !== 'undefined' && typeof window === 'undefined') {
+  // Usamos import dinámico para evitar problemas con Turbopack al compilar
+  import('@/lib/env-validate').then(({ logEnvStatus }) => logEnvStatus()).catch(() => {});
+}
+
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
@@ -23,7 +29,13 @@ export const metadata: Metadata = {
     title: 'BudgetAI — Generador de Presupuestos con IA',
     description: 'Genera presupuestos profesionales desde texto e imágenes con inteligencia artificial.',
   },
+  manifest: '/manifest.json',
+  themeColor: 'hsl(239, 84%, 67%)',
 };
+
+import { Toaster } from '@/components/ui/Toaster';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import ThemeScript from '@/components/ui/ThemeScript';
 
 export default function RootLayout({
   children,
@@ -31,9 +43,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className="dark">
+    <html lang="es" className="dark" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
-        {children}
+        <ThemeScript />
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
+        <Toaster />
       </body>
     </html>
   );

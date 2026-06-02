@@ -1,0 +1,11 @@
+{
+  "name": "BudgetAI",
+  "short_name": "BudgetAI",
+  "description": "Generador de presupuestos profesionales con IA",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "hsl(222, 47%, 5%)",
+  "theme_color": "hsl(239, 84%, 67%)",
+  "orientation": "any",
+  "icons": []
+}

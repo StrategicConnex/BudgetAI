@@ -1,6 +1,9 @@
 import { callAI, withRetry, extractJSON, AI_MODELS } from '../providers';
 import { NORMALIZER_SYSTEM_PROMPT } from '../prompts/system';
+import { createLogger } from '@/lib/logger';
 import type { ParsedInput } from '@/types/budget';
+
+const log = createLogger('ParserStage');
 
 const PARSER_MOCK: ParsedInput = {
   clienteInfo: { nombre: 'Cliente Demo', empresa: '' },
@@ -21,7 +24,7 @@ interface ParserInput {
 
 export async function parseInput({ texto, visionSummary }: ParserInput): Promise<ParsedInput> {
   if (!process.env.OPENROUTER_API_KEY) {
-    console.warn('[ParserStage] Usando mock — no hay OPENROUTER_API_KEY configurada');
+    log.warn('Usando mock — no hay OPENROUTER_API_KEY configurada');
     return PARSER_MOCK;
   }
 

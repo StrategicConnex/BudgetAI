@@ -1,5 +1,6 @@
 import type { BudgetData, BudgetItem } from '@/types/budget';
 import { formatCurrency } from '@/lib/ai/stages/validator';
+import { escapeHtml } from '@/lib/html-sanitize';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -44,7 +45,7 @@ function buildItemRows(items: BudgetItem[], fmt: (n: number) => string): string 
     rows += `
       <tr style="background:${bg};">
         <td style="padding:9px 14px;font-size:10pt;color:${TEXT_MED};vertical-align:top;border-bottom:1px solid #d0d9ec;">
-          ${item.titulo}
+          ${escapeHtml(item.titulo)}
         </td>
         <td style="padding:9px 14px;font-size:10.5pt;font-weight:700;color:${TEXT};vertical-align:top;border-bottom:1px solid #d0d9ec;white-space:nowrap;">
           ${fmt(item.precioTotal)}
@@ -71,7 +72,7 @@ export function renderConstructionHTML(budget: BudgetData): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Presupuesto — ${cliente.nombre}</title>
+  <title>Presupuesto — ${escapeHtml(cliente.nombre)}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Calibri:wght@400;700&family=Arial:wght@400;700&display=swap" rel="stylesheet">
   <style>
@@ -286,7 +287,7 @@ export function renderConstructionHTML(budget: BudgetData): string {
   ${headerImg
     ? `<img src="${headerImg}" alt="YPY Construcciones" class="header-img" />`
     : `<div style="background:${PRIMARY};padding:40px 38px;margin-bottom:28px;">
-         <span style="color:white;font-size:28pt;font-weight:700;text-transform:uppercase;">${empresaNombre}</span>
+         <span style="color:white;font-size:28pt;font-weight:700;text-transform:uppercase;">${escapeHtml(empresaNombre)}</span>
        </div>`
   }
 
@@ -301,20 +302,20 @@ export function renderConstructionHTML(budget: BudgetData): string {
       <tbody>
         <tr>
           <td class="info-label">CLIENTE</td>
-          <td class="info-value">${cliente.nombre}${cliente.empresa ? ` — ${cliente.empresa}` : ''}</td>
+          <td class="info-value">${escapeHtml(cliente.nombre)}${cliente.empresa ? ` — ${escapeHtml(cliente.empresa)}` : ''}</td>
         </tr>
         <tr>
           <td class="info-label">FECHA</td>
-          <td class="info-value">${formatDateES(budget.createdAt)}</td>
+          <td class="info-value">${escapeHtml(formatDateES(budget.createdAt))}</td>
         </tr>
         <tr>
           <td class="info-label">CATEGORÍA</td>
-          <td class="info-value">${budget.descripcionGeneral}</td>
+          <td class="info-value">${escapeHtml(budget.descripcionGeneral)}</td>
         </tr>
         ${cliente.direccion ? `
         <tr>
           <td class="info-label">DIRECCIÓN</td>
-          <td class="info-value">${cliente.direccion}</td>
+          <td class="info-value">${escapeHtml(cliente.direccion)}</td>
         </tr>` : ''}
       </tbody>
     </table>
@@ -354,26 +355,26 @@ export function renderConstructionHTML(budget: BudgetData): string {
         ${condiciones.formaPago ? `
         <tr>
           <td class="cond-label">Anticipo para inicio de obra</td>
-          <td class="cond-value">${condiciones.formaPago}</td>
+          <td class="cond-value">${escapeHtml(condiciones.formaPago)}</td>
         </tr>` : ''}
         ${condiciones.plazoDias > 0 ? `
         <tr>
           <td class="cond-label">Plazo de ejecución</td>
-          <td class="cond-value">${condiciones.plazoDias} días hábiles</td>
+          <td class="cond-value">${escapeHtml(String(condiciones.plazoDias))} días hábiles</td>
         </tr>` : ''}
         <tr>
           <td class="cond-label">Validez de la oferta</td>
-          <td class="cond-value">${condiciones.validezDias} días hábiles desde la fecha de emisión</td>
+          <td class="cond-value">${escapeHtml(String(condiciones.validezDias))} días hábiles desde la fecha de emisión</td>
         </tr>
         ${condiciones.notas ? `
         <tr>
           <td class="cond-label">Observaciones</td>
-          <td class="cond-value">${condiciones.notas}</td>
+          <td class="cond-value">${escapeHtml(condiciones.notas)}</td>
         </tr>` : ''}
         ${budget.observaciones ? `
         <tr>
           <td class="cond-label">Notas adicionales</td>
-          <td class="cond-value">${budget.observaciones}</td>
+          <td class="cond-value">${escapeHtml(budget.observaciones)}</td>
         </tr>` : ''}
       </tbody>
     </table>
@@ -387,24 +388,24 @@ export function renderConstructionHTML(budget: BudgetData): string {
         ${empresa?.nombre ? `
         <tr>
           <td class="contact-label">Responsable</td>
-          <td class="contact-value">${empresa.nombre}</td>
+          <td class="contact-value">${escapeHtml(empresa.nombre)}</td>
         </tr>` : ''}
         ${empresaTelefono ? `
         <tr>
           <td class="contact-label">Teléfono</td>
-          <td class="contact-value">${empresaTelefono}</td>
+          <td class="contact-value">${escapeHtml(empresaTelefono)}</td>
         </tr>` : ''}
         ${empresaEmail ? `
         <tr>
           <td class="contact-label">Correo electrónico</td>
-          <td class="contact-value">${empresaEmail}</td>
+          <td class="contact-value">${escapeHtml(empresaEmail)}</td>
         </tr>` : ''}
       </tbody>
     </table>
 
     <!-- FOOTER -->
     <div class="budget-footer">
-      ${empresaNombre} — Innovative Energy Solutions
+      ${escapeHtml(empresaNombre)} — Innovative Energy Solutions
     </div>
 
   </div>

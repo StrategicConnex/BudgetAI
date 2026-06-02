@@ -1,19 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api-middleware';
 import { generateBudgetOrchestrator } from '@/lib/ai/orchestrator';
 import { RawInputSchema } from '@/lib/validators/budget';
 import { createClient } from '@/lib/supabase/server';
+import { createLogger } from '@/lib/logger';
 
-export const maxDuration = 60; // 60s timeout para Vercel
+const log = createLogger('API/generate');
 
-export async function POST(request: NextRequest) {
+export const maxDuration = 60;
+
+export const POST = withAuth(async (request: NextRequest, { user }) => {
   try {
-    // Auth check
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
-    }
-
     const body = await request.json();
 
     // Validate input
@@ -23,6 +20,19 @@ export async function POST(request: NextRequest) {
         { error: 'Datos inválidos', details: parsed.error.flatten() },
         { status: 400 }
       );
+    }
+
+    // V-06: Validar tamaño de imágenes server-side
+    if (body.imagenes && Array.isArray(body.imagenes)) {
+      const MAX_IMAGE_BASE64 = 14 * 1024 * 1024;
+      for (const img of body.imagenes) {
+        if (img.base64 && img.base64.length > MAX_IMAGE_BASE64) {
+          return NextResponse.json(
+            { error: `Imagen ${img.filename || 'desconocida'} demasiado grande. Máximo 10MB por archivo.` },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     const rawInput = {
@@ -44,7 +54,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Save to Supabase
+    // Save to Supabase (nuevo cliente para la query, sin re-autenticar)
+    const supabase = await createClient();
     const { data: budgetRow, error: dbError } = await supabase
       .from('budgets')
       .insert({
@@ -59,8 +70,13 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (dbError) {
-      console.error('[API/generate] DB error:', dbError);
-      // No fallar — devolver el resultado aunque no se guarde
+      log.error('DB error al guardar presupuesto', dbError);
+      return NextResponse.json({
+        success: true,
+        budget: result.data,
+        id: null,
+        warning: 'El presupuesto se generó correctamente pero no se pudo guardar en la base de datos. Descargalo o copiá los datos antes de continuar.',
+      });
     }
 
     return NextResponse.json({
@@ -69,10 +85,10 @@ export async function POST(request: NextRequest) {
       id: budgetRow?.id,
     });
   } catch (error) {
-    console.error('[API/generate]', error);
+    log.error('Error generando presupuesto', error instanceof Error ? error : undefined);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }
     );
   }
-}
+}, { rateLimit: 'generate' });

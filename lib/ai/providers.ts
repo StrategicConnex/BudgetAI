@@ -1,4 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('AI-Providers');
 
 // ===== Google Gemini Native Provider =====
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
@@ -57,7 +60,7 @@ export async function callAI(
       jsonMode = true,
     } = options;
 
-    console.log(`[AI-Gemini] Iniciando llamada directa a Google Gemini (${model})...`);
+    log.info(`Iniciando llamada directa a Google Gemini (${model})...`);
 
     // 1. Extraer el systemInstruction si existe
     const systemMessage = messages.find(m => m.role === 'system')?.content;
@@ -117,16 +120,17 @@ export async function callAI(
       throw new Error('[AI-Gemini] Respuesta vacía del modelo nativo');
     }
 
-    console.log(`[AI-Gemini] Respuesta exitosa directa de ${model}.`);
+    log.info(`Respuesta exitosa directa de ${model}.`);
     return content;
 
   } catch (err) {
-    console.warn('[AI] Google Gemini directo falló. Utilizando backup de Xiaomi MiMo API...', (err as Error).message);
+    log.warn('Google Gemini directo falló. Utilizando backup de Xiaomi MiMo API...', { error: (err as Error).message });
     try {
       return await callXiaomi(messages, options);
     } catch (xiaomiErr) {
-      console.error('[AI] Falló también el backup de Xiaomi:', xiaomiErr);
-      throw new Error(`[AI] Ambos proveedores fallaron.\nGemini Directo: ${(err as Error).message}\nXiaomi: ${(xiaomiErr as Error).message}`);
+      log.error('Falló también el backup de Xiaomi', xiaomiErr instanceof Error ? xiaomiErr : undefined);
+      // V-05: No exponer detalles internos de proveedores en errores al cliente
+      throw new Error('[AI] No se pudo generar el presupuesto. Servicio temporalmente no disponible. Intentalo de nuevo en unos minutos.');
     }
   }
 }
@@ -142,7 +146,7 @@ export async function callXiaomi(
     jsonMode = true,
   } = options;
 
-  console.log('[AI-Xiaomi] Iniciando llamada de backup a Xiaomi MiMo API...');
+  log.info('Iniciando llamada de backup a Xiaomi MiMo API...');
 
   try {
     // 1. Intentamos con el modelo Pro (Anthropic Compatible) que ofrece mayor razonamiento
@@ -187,14 +191,14 @@ export async function callXiaomi(
       const data = await res.json() as { content: Array<{ type: string; text: string }> };
       const content = data.content?.[0]?.text;
       if (content) {
-        console.log('[AI-Xiaomi] Respuesta exitosa de mimo-v2.5-pro (Anthropic Format).');
+        log.info('Respuesta exitosa de mimo-v2.5-pro (Anthropic Format).');
         return content;
       }
     }
     
-    console.warn('[AI-Xiaomi] Falló la API Anthropic de Xiaomi. Intentando con la API OpenAI de Xiaomi (mimo-v2.5)...');
+    log.warn('Falló la API Anthropic de Xiaomi. Intentando con la API OpenAI de Xiaomi (mimo-v2.5)...');
   } catch (err) {
-    console.warn('[AI-Xiaomi] Error en canal Anthropic de Xiaomi:', (err as Error).message, '. Intentando canal OpenAI...');
+    log.warn(`Error en canal Anthropic de Xiaomi: ${(err as Error).message}. Intentando canal OpenAI...`);
   }
 
   // 2. Fallback al canal OpenAI Compatible (mimo-v2.5)
@@ -232,7 +236,7 @@ export async function callXiaomi(
     throw new Error('[Xiaomi MiMo] Respuesta vacía del modelo de backup');
   }
 
-  console.log('[AI-Xiaomi] Respuesta exitosa de mimo-v2.5 (OpenAI Format).');
+  log.info('Respuesta exitosa de mimo-v2.5 (OpenAI Format).');
   return content;
 }
 
@@ -249,7 +253,7 @@ export async function withRetry<T>(
       return await fn();
     } catch (error) {
       lastError = error as Error;
-      console.warn(`[AI] Intento ${attempt + 1}/${maxRetries} fallido:`, (error as Error).message);
+      log.warn(`Intento ${attempt + 1}/${maxRetries} fallido`, { error: (error as Error).message });
       if (attempt < maxRetries - 1) {
         const delay = baseDelayMs * Math.pow(2, attempt);
         await new Promise(resolve => setTimeout(resolve, delay));
