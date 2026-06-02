@@ -37,7 +37,6 @@ export const viewport: Viewport = {
 };
 
 import { Toaster } from '@/components/ui/Toaster';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
 import ThemeScript from '@/components/ui/ThemeScript';
 
 export default function RootLayout({
@@ -49,9 +48,7 @@ export default function RootLayout({
     <html lang="es" className="dark" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeScript />
-        <ErrorBoundary>
-          {children}
-        </ErrorBoundary>
+        {children}
         <Toaster />
       </body>
     </html>
