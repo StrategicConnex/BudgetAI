@@ -22,9 +22,16 @@ export default function VersionHistory({ budgetId, onRestore, disabled }: Versio
   useEffect(() => {
     if (expanded && versions.length === 0) {
       setLoading(true);
-      import('@/lib/supabase/queries/budget-versions').then(({ getBudgetVersions }) =>
-        getBudgetVersions(budgetId).then(v => { setVersions(v); setLoading(false); })
-      ).catch(() => setLoading(false));
+      fetch(`/api/budgets/versions?budgetId=${budgetId}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Error al obtener versiones');
+          return res.json();
+        })
+        .then(v => {
+          setVersions(v);
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
     }
   }, [expanded, budgetId, versions.length]);
 
