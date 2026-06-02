@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 
@@ -30,6 +30,9 @@ export const metadata: Metadata = {
     description: 'Genera presupuestos profesionales desde texto e imágenes con inteligencia artificial.',
   },
   manifest: '/manifest.json',
+};
+
+export const viewport: Viewport = {
   themeColor: 'hsl(239, 84%, 67%)',
 };
 
