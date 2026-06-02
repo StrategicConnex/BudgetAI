@@ -212,18 +212,18 @@ describe('Row Level Security (RLS) — Policy Validation', () => {
 // ==============================================
 describe('Middleware — Route Protection', () => {
   it('should protect dashboard routes from unauthenticated access', async () => {
-    const middleware = await import('@/middleware');
-    expect(middleware.middleware).toBeDefined();
+    const proxy = await import('@/proxy');
+    expect(proxy.default).toBeDefined();
   });
 
   it('should redirect unauthenticated users from /dashboard', async () => {
-    const { config } = await import('@/middleware');
+    const { config } = await import('@/proxy');
     expect(config.matcher).toBeDefined();
     expect(Array.isArray(config.matcher)).toBe(true);
   });
 
   it('should exclude static assets from middleware', async () => {
-    const { config } = await import('@/middleware');
+    const { config } = await import('@/proxy');
     const matchers = config.matcher as string[];
     
     // Should exclude common static paths
