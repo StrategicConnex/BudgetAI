@@ -30,7 +30,7 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'npx next dev',
+    command: 'npx next dev --webpack',
     url: 'http://localhost:3000/login',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
