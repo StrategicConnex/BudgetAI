@@ -22,14 +22,8 @@ export const POST = withRateLimit(async (req: NextRequest) => {
 
     const buffer = Buffer.from(base64, 'base64');
 
-    // pdf-parse v4: PDFParse recibe { data: Buffer, verbosity: number }
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { PDFParse, VerbosityLevel } = require('pdf-parse') as {
-      VerbosityLevel: { ERRORS: number };
-      PDFParse: new (opts: { data: Buffer; verbosity: number }) => {
-        promise: Promise<{ text: string; numpages: number }>;
-      };
-    };
+    const { PDFParse, VerbosityLevel } = require('pdf-parse') as any;
 
     const parser = new PDFParse({ data: buffer, verbosity: VerbosityLevel.ERRORS });
     const data = await parser.getText();
