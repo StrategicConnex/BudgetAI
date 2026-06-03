@@ -101,7 +101,22 @@ export function useFileUpload({
 
           let pdfText: string | undefined;
           if (isPDF) {
-            pdfText = await extractPDFText(base64, file.name);
+            try {
+              const { PDFParse } = await import('pdf-parse');
+              // Configurar worker de pdfjs-dist
+              PDFParse.setWorker('https://unpkg.com/pdfjs-dist@5.4.296/build/pdf.worker.min.mjs');
+              
+              const arrayBuffer = await file.arrayBuffer();
+              const parser = new PDFParse({ data: arrayBuffer });
+              const result = await parser.getText();
+              await parser.destroy();
+              if (result && result.text) {
+                pdfText = result.text.trim();
+              }
+            } catch (err) {
+              console.error('Error al extraer texto del PDF en cliente, reintentando en servidor:', err);
+              pdfText = await extractPDFText(base64, file.name);
+            }
           }
 
           onAddImage({
