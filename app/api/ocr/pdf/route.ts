@@ -32,10 +32,11 @@ export const POST = withRateLimit(async (req: NextRequest) => {
     };
 
     const parser = new PDFParse({ data: buffer, verbosity: VerbosityLevel.ERRORS });
-    const data = await parser.promise;
+    const data = await parser.getText();
+    await parser.destroy();
 
     const text = data.text?.trim() || '';
-    const pageCount = data.numpages || 1;
+    const pageCount = data.pages?.length || 1;
 
     return NextResponse.json({
       success: true,
