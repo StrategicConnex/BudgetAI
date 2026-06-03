@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import ShareBudgetButton from '@/components/budget/ShareBudgetButton';
 import VersionHistory from '@/components/budget/VersionHistory';
 import { saveBudgetVersion } from '@/lib/save-version';
+import { useAutoSave } from '@/hooks/useAutoSave';
 import type { BudgetItem, BudgetData, BudgetCliente, BudgetCondiciones } from '@/types/budget';
 
 // ── Form types (replacing any) ────────────────────────
@@ -73,6 +74,12 @@ export default function BudgetPreview() {
   } = useExport({
     budget,
     onSuccess: () => setCurrentStep('exported'),
+  });
+
+  const { isSaving, lastSaved, saveError, saveNow } = useAutoSave({
+    budgetId,
+    budget,
+    delay: 2000,
   });
 
   if (!budget) return null;
@@ -149,6 +156,39 @@ export default function BudgetPreview() {
           Volver a editar
         </Button>
         <div className="flex items-center gap-3">
+          {/* Auto-save indicator */}
+          {budgetId && (
+            <div className="flex items-center gap-1.5 text-xs">
+              {isSaving ? (
+                <>
+                  <div className="w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                  <span className="text-muted-foreground">Guardando...</span>
+                </>
+              ) : saveError ? (
+                <>
+                  <button
+                    onClick={saveNow}
+                    className="flex items-center gap-1 text-destructive hover:text-destructive/80 transition-colors"
+                    title={'Error: ' + saveError + '. Click para reintentar.'}
+                  >
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    {saveError.length > 30 ? saveError.slice(0, 30) + '...' : saveError}
+                  </button>
+                </>
+              ) : lastSaved ? (
+                <span className="text-emerald-400 flex items-center gap-1">
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  Guardado
+                </span>
+              ) : null}
+            </div>
+          )}
           {exportError && (
             <span className="text-xs text-destructive">{exportError}</span>
           )}

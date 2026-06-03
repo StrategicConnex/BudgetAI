@@ -46,24 +46,17 @@ vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
 
-function createIconMock(name: string) {
-  return (p: any) => React.createElement('svg', { 'data-testid': `icon-${name}`, ...p });
-}
-vi.mock('lucide-react', () => ({
-  ArrowLeft: createIconMock('ArrowLeft'),
-  FileDown: createIconMock('FileDown'),
-  FileText: createIconMock('FileText'),
-  FileCode: createIconMock('FileCode'),
-  Pencil: createIconMock('Pencil'),
-  Check: createIconMock('Check'),
-  X: createIconMock('X'),
-  User: createIconMock('User'),
-  Package: createIconMock('Package'),
-  Plus: createIconMock('Plus'),
-  Copy: createIconMock('Copy'),
-  History: createIconMock('History'),
-  Trash2: createIconMock('Trash2'),
-}));
+const icons = [
+  'ArrowLeft', 'FileDown', 'FileText', 'FileCode', 'Pencil', 'Check', 'X',
+  'User', 'Package', 'Plus', 'Copy', 'History', 'Trash2', 'Eye', 'Moon', 'Sun', 'Monitor'
+];
+vi.mock('lucide-react', () => {
+  const mock: Record<string, any> = {};
+  for (const icon of icons) {
+    mock[icon] = (p: any) => React.createElement('svg', { 'data-testid': `icon-${icon}`, ...p });
+  }
+  return mock;
+});
 
 vi.mock('next/link', () => ({
   default: ({ children, href, className }: any) =>

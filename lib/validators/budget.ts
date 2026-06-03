@@ -19,6 +19,7 @@ export const BudgetTotalsSchema = z.object({
   subtotal: z.number().nonnegative(),
   impuestos: z.number().nonnegative(),
   tasaImpuesto: z.number().min(0).max(1).default(0.21),
+  tasaImpositivaId: z.enum(['exento', 'reducido', 'general', 'diferencial']).optional(),
   total: z.number().nonnegative(),
   currency: z.enum(['ARS', 'USD']).default('ARS'),
 });
@@ -109,6 +110,7 @@ export const RawInputSchema = z.object({
   clienteNombre: z.string().optional(),
   clienteEmpresa: z.string().optional(),
   tasaImpuesto: z.number().min(0).max(1).default(0.21),
+  tasaImpositivaId: z.enum(['exento', 'reducido', 'general', 'diferencial']).optional(),
 });
 
 // ===== TYPES =====

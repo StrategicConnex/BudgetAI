@@ -16,6 +16,7 @@ import {
 import TextTemplateSelector from '@/components/budget/TextTemplateSelector';
 import CompanySettings from '@/components/budget/CompanySettings';
 import { trackAICall } from '@/components/dashboard/AICostMonitor';
+import { TASAS_IMPOSITIVAS } from '@/types/budget';
 import type { PipelineStage } from '@/lib/ai/orchestrator';
 
 const MAX_FILES = 20;
@@ -39,6 +40,8 @@ export default function AIInputArea() {
     clienteNombre, setClienteNombre,
     clienteEmpresa, setClienteEmpresa,
     tasaImpuesto,
+    tasaImpositivaId,
+    setTasaImpositivaId,
     isGenerating: storeIsGenerating,
     pipelineProgress,
     error: storeError, setError: setStoreError,
@@ -82,6 +85,7 @@ export default function AIInputArea() {
       templateId,
       currency,
       tasaImpuesto,
+      tasaImpositivaId,
       clienteNombre,
       clienteEmpresa,
     });
@@ -343,7 +347,7 @@ export default function AIInputArea() {
           </div>
 
           {/* Currency */}
-          <div>
+          <div className="mb-5">
             <label className="block text-xs font-medium text-muted-foreground mb-2">Moneda</label>
             <div className="flex gap-2">
               {(['ARS', 'USD'] as const).map(c => (
@@ -358,6 +362,28 @@ export default function AIInputArea() {
                   }`}
                 >
                   {c === 'ARS' ? '$ ARS' : 'USD'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tax Rate */}
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-2">IVA</label>
+            <div className="space-y-1.5">
+              {TASAS_IMPOSITIVAS.map(t => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTasaImpositivaId(t.id)}
+                  className={`w-full text-left px-4 py-2.5 rounded-lg border text-sm transition-all ${
+                    tasaImpositivaId === t.id
+                      ? 'bg-primary/10 border-primary/40 text-foreground'
+                      : 'bg-secondary border-border text-muted-foreground hover:border-primary/20'
+                  }`}
+                >
+                  <div className="font-medium">{t.label}</div>
+                  <div className="text-xs opacity-70 mt-0.5">{t.descripcion}</div>
                 </button>
               ))}
             </div>

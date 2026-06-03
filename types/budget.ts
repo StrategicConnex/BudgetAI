@@ -6,6 +6,22 @@ export type BudgetStatus = 'draft' | 'generating' | 'ready' | 'exported';
 
 export type TemplateId = 'construction' | 'minimal-white';
 
+export type TasaImpositivaId = 'exento' | 'reducido' | 'general' | 'diferencial';
+
+export interface TasaImpositiva {
+  id: TasaImpositivaId;
+  label: string;
+  valor: number; // 0 = exento, 0.105 = 10.5%, 0.21 = 21%, 0.27 = 27%
+  descripcion: string;
+}
+
+export const TASAS_IMPOSITIVAS: TasaImpositiva[] = [
+  { id: 'exento',     label: 'Exento',      valor: 0,     descripcion: 'IVA 0% — exento' },
+  { id: 'reducido',   label: 'Reducido',    valor: 0.105, descripcion: 'IVA 10.5% — reducido' },
+  { id: 'general',    label: 'General',     valor: 0.21,  descripcion: 'IVA 21% — general' },
+  { id: 'diferencial', label: 'Diferencial', valor: 0.27,  descripcion: 'IVA 27% — diferencial' },
+];
+
 export interface BudgetItem {
   id: string;
   titulo: string;
@@ -23,6 +39,7 @@ export interface BudgetTotals {
   subtotal: number;
   impuestos: number;
   tasaImpuesto: number; // 0.21 = 21%
+  tasaImpositivaId?: TasaImpositivaId; // qué tasa se aplica
   total: number;
   currency: Currency;
 }
@@ -79,6 +96,7 @@ export interface RawInput {
   currency: Currency;
   empresa?: BudgetEmpresa;
   tasaImpuesto?: number; // Fracción: 0.21 = 21%. Default: 0.21
+  tasaImpositivaId?: TasaImpositivaId;
 }
 
 export interface ImageInput {

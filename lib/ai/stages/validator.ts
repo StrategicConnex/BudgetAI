@@ -1,16 +1,18 @@
 import type { AIBudgetOutputType } from '@/lib/validators/budget';
-import type { BudgetData, BudgetItem, BudgetTotals, Currency } from '@/types/budget';
+import type { BudgetData, BudgetItem, BudgetTotals, Currency, TasaImpositivaId } from '@/types/budget';
+import { TASAS_IMPOSITIVAS } from '@/types/budget';
 
 interface ValidatorInput {
   aiOutput: AIBudgetOutputType;
   currency: Currency;
   tasaImpuesto: number;
+  tasaImpositivaId?: TasaImpositivaId;
   templateId: 'construction' | 'minimal-white';
   empresa?: BudgetData['empresa'];
 }
 
 export function validateAndFinalize(input: ValidatorInput): BudgetData {
-  const { aiOutput, currency, tasaImpuesto, templateId, empresa } = input;
+  const { aiOutput, currency, tasaImpuesto, tasaImpositivaId, templateId, empresa } = input;
 
   // 1. Eliminar duplicados por título
   const seenTitles = new Set<string>();
@@ -49,6 +51,10 @@ export function validateAndFinalize(input: ValidatorInput): BudgetData {
     subtotal,
     impuestos,
     tasaImpuesto,
+    tasaImpositivaId: tasaImpositivaId || (() => {
+      const found = TASAS_IMPOSITIVAS.find(t => t.valor === tasaImpuesto);
+      return found?.id || 'general';
+    })(),
     total,
     currency,
   };

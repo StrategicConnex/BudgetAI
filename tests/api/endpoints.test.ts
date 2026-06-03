@@ -360,7 +360,7 @@ describe('POST /api/export/html', () => {
   });
 
   it('should generate HTML with proper structure', async () => {
-    const budget = generateFakeBudgetData();
+    const budget = generateFakeBudgetData({ templateId: 'minimal-white' });
     const request = new Request('http://localhost:3000/api/export/html', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

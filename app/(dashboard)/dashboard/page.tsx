@@ -3,6 +3,7 @@ import { listBudgets } from '@/lib/supabase/queries/budgets';
 import Link from 'next/link';
 import { FileText, Sparkles, Download, TrendingUp } from 'lucide-react';
 import AIStatusCards from '@/components/dashboard/AIStatusCards';
+import AnalyticsDashboard from '@/components/dashboard/AnalyticsDashboard';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -38,27 +39,8 @@ export default async function DashboardPage() {
       {/* AI Status Cards */}
       <AIStatusCards />
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <StatCard
-          icon={<FileText className="w-5 h-5" />}
-          label="Presupuestos generados"
-          value={String(totalBudgets)}
-          color="primary"
-        />
-        <StatCard
-          icon={<Download className="w-5 h-5" />}
-          label="Exportaciones"
-          value="0"
-          color="emerald"
-        />
-        <StatCard
-          icon={<TrendingUp className="w-5 h-5" />}
-          label="Este mes"
-          value={String(totalBudgets)}
-          color="violet"
-        />
-      </div>
+      {/* Analytics Dashboard */}
+      <AnalyticsDashboard budgets={budgets} />
 
       {/* CTA */}
       <div

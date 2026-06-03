@@ -1,4 +1,5 @@
-import type { ImageInput, TemplateId, Currency } from '@/types/budget';
+import type { ImageInput, TemplateId, Currency, TasaImpositivaId } from '@/types/budget';
+import { TASAS_IMPOSITIVAS } from '@/types/budget';
 
 // ── State ───────────────────────────────────────────
 export interface FormSlice {
@@ -9,6 +10,7 @@ export interface FormSlice {
   clienteNombre: string;
   clienteEmpresa: string;
   tasaImpuesto: number;
+  tasaImpositivaId: TasaImpositivaId;
 
   setRawText: (text: string) => void;
   addImage: (image: ImageInput) => void;
@@ -18,6 +20,7 @@ export interface FormSlice {
   setClienteNombre: (name: string) => void;
   setClienteEmpresa: (empresa: string) => void;
   setTasaImpuesto: (tasa: number) => void;
+  setTasaImpositivaId: (id: TasaImpositivaId) => void;
 }
 
 export const FORM_INITIAL_STATE = {
@@ -28,6 +31,7 @@ export const FORM_INITIAL_STATE = {
   clienteNombre: '',
   clienteEmpresa: '',
   tasaImpuesto: 0.21,
+  tasaImpositivaId: 'general' as TasaImpositivaId,
 };
 
 export const createFormSlice = (set: any): FormSlice => ({
@@ -40,5 +44,15 @@ export const createFormSlice = (set: any): FormSlice => ({
   setCurrency: (currency) => set((state: any) => { state.currency = currency; }),
   setClienteNombre: (name) => set((state: any) => { state.clienteNombre = name; }),
   setClienteEmpresa: (empresa) => set((state: any) => { state.clienteEmpresa = empresa; }),
-  setTasaImpuesto: (tasa) => set((state: any) => { state.tasaImpuesto = tasa; }),
+  setTasaImpuesto: (tasa) => set((state: any) => {
+    state.tasaImpuesto = tasa;
+    // Sync tasaImpositivaId based on the tasa value
+    const match = TASAS_IMPOSITIVAS.find(t => t.valor === tasa);
+    if (match) state.tasaImpositivaId = match.id;
+  }),
+  setTasaImpositivaId: (id) => set((state: any) => {
+    state.tasaImpositivaId = id;
+    const tasa = TASAS_IMPOSITIVAS.find(t => t.id === id);
+    if (tasa) state.tasaImpuesto = tasa.valor;
+  }),
 });

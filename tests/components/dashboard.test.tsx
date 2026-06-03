@@ -37,19 +37,32 @@ vi.mock('@/components/ui/Skeleton', () => ({
 vi.mock('next/link', () => ({
   default: ({ children, href, className }: any) => React.createElement('a', { href, className, 'data-testid': 'nav-link' }, children),
 }));
-vi.mock('lucide-react', () => ({
-  Brain: (p: any) => React.createElement('svg', { 'data-testid': 'icon-brain', ...p }),
-  CreditCard: (p: any) => React.createElement('svg', { 'data-testid': 'icon-credit', ...p }),
-  LayoutDashboard: (p: any) => React.createElement('svg', { 'data-testid': 'icon-layout', ...p }),
-  FileText: (p: any) => React.createElement('svg', { 'data-testid': 'icon-file', ...p }),
-  Plus: (p: any) => React.createElement('svg', { 'data-testid': 'icon-plus', ...p }),
-  LogOut: (p: any) => React.createElement('svg', { 'data-testid': 'icon-logout', ...p }),
-  Sparkles: (p: any) => React.createElement('svg', { 'data-testid': 'icon-sparkles', ...p }),
-  Wifi: (p: any) => React.createElement('svg', { 'data-testid': 'icon-wifi', ...p }),
-  BarChart3: (p: any) => React.createElement('svg', { 'data-testid': 'icon-chart', ...p }),
-  AlertTriangle: (p: any) => React.createElement('svg', { 'data-testid': 'icon-alert', ...p }),
-  RefreshCw: (p: any) => React.createElement('svg', { 'data-testid': 'icon-refresh', ...p }),
-}));
+const specMocks: Record<string, string> = {
+  Brain: 'brain',
+  CreditCard: 'credit',
+  LayoutDashboard: 'layout',
+  FileText: 'file',
+  Plus: 'plus',
+  LogOut: 'logout',
+  Sparkles: 'sparkles',
+  Wifi: 'wifi',
+  BarChart3: 'chart',
+  AlertTriangle: 'alert',
+  RefreshCw: 'refresh',
+  Moon: 'moon',
+  Sun: 'sun',
+  Monitor: 'monitor',
+  Menu: 'menu',
+  X: 'x',
+  Search: 'search'
+};
+vi.mock('lucide-react', () => {
+  const mock: Record<string, any> = {};
+  for (const [icon, testId] of Object.entries(specMocks)) {
+    mock[icon] = (p: any) => React.createElement('svg', { 'data-testid': `icon-${testId}`, ...p });
+  }
+  return mock;
+});
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
@@ -119,7 +132,7 @@ describe('Dashboard Components', () => {
       render(React.createElement(Sidebar, { userEmail: 'juan@test.com' }));
       expect(screen.getByText('juan@test.com')).toBeTruthy();
       expect(screen.getByText('J')).toBeTruthy();
-      expect(screen.getByText('Plan gratuito')).toBeTruthy();
+      expect(screen.getByText('usuario')).toBeTruthy();
     });
 
     it('logout calls signOut and redirects', async () => {

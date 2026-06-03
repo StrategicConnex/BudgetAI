@@ -4,7 +4,7 @@ import { useState, useCallback, useRef } from 'react';
 import { useBudgetStore } from '@/store/budget.store';
 import { trackAICall } from '@/components/dashboard/AICostMonitor';
 import type { PipelineStage } from '@/lib/ai/orchestrator';
-import type { ImageInput, TemplateId, Currency } from '@/types/budget';
+import type { ImageInput, TemplateId, Currency, TasaImpositivaId } from '@/types/budget';
 
 interface GenerateOptions {
   rawText: string;
@@ -12,6 +12,7 @@ interface GenerateOptions {
   templateId: TemplateId;
   currency: Currency;
   tasaImpuesto: number;
+  tasaImpositivaId?: TasaImpositivaId;
   clienteNombre?: string;
   clienteEmpresa?: string;
 }
@@ -93,7 +94,7 @@ export function useGenerate(): GenerateReturn {
 
   const generate = useCallback(
     async (options: GenerateOptions) => {
-      const { rawText, images, templateId, currency, tasaImpuesto, clienteNombre, clienteEmpresa } = options;
+      const { rawText, images, templateId, currency, tasaImpuesto, tasaImpositivaId, clienteNombre, clienteEmpresa } = options;
 
       if (!rawText.trim() || rawText.length < 10) {
         setError('Describí el trabajo con al menos 10 caracteres');
@@ -134,6 +135,7 @@ export function useGenerate(): GenerateReturn {
             templateId,
             currency,
             tasaImpuesto,
+            tasaImpositivaId: tasaImpositivaId || undefined,
             clienteNombre: clienteNombre || undefined,
             clienteEmpresa: clienteEmpresa || undefined,
           }),

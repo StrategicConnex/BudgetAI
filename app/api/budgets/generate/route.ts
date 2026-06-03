@@ -42,6 +42,7 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
       currency: parsed.data.currency,
       empresa: body.empresa,
       tasaImpuesto: parsed.data.tasaImpuesto ?? 0.21,
+      tasaImpositivaId: parsed.data.tasaImpositivaId || undefined,
     };
 
     // Run AI pipeline

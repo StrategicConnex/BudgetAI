@@ -87,6 +87,7 @@ export async function generateBudgetOrchestrator(
       aiOutput,
       currency: rawInput.currency,
       tasaImpuesto: rawInput.tasaImpuesto ?? 0.21,
+      tasaImpositivaId: rawInput.tasaImpositivaId,
       templateId: rawInput.templateId,
       empresa: rawInput.empresa,
     });
