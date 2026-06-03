@@ -83,8 +83,8 @@ export function useFileUpload({
           } else {
             try {
               const compressedFile = await imageCompression(file, {
-                maxSizeMB: 1,
-                maxWidthOrHeight: 1920,
+                maxSizeMB: 0.2,
+                maxWidthOrHeight: 1024,
                 useWebWorker: true,
               });
               const compressedDataUrl = await new Promise<string>((resolve, reject) => {
